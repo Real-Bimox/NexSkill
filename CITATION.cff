@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "Citation metadata is currently a placeholder and will be updated after the public paper record is available."
+title: "SkillDAG: Self-Evolving Typed Skill Graphs for LLM Skill Selection at Scale"
+authors:
+  - name: "SkillDAG Authors"
+version: "0.1.0"
+date-released: "2026-05-27"
+preferred-citation:
+  type: generic
+  title: "SkillDAG: Self-Evolving Typed Skill Graphs for LLM Skill Selection at Scale"
+  authors:
+    - name: "SkillDAG Authors"
+  year: 2026
