@@ -103,6 +103,7 @@ echo "  graph      : ${GRAPH_PATH}"
 echo "  max_games  : ${MAX_GAMES}    workers: ${MAX_WORKERS}    steps: ${MAX_STEPS}"
 
 cd "${REPO_ROOT}"
+export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 exec "${PYTHON_BIN}" benchmarks/alfworld/run_alfworld.py \
   --model "${SKILLDAG_MODEL}" \
   --skilldag_api_base "${SKILLDAG_API_BASE}" \

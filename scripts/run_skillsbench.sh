@@ -64,6 +64,8 @@ fi
 # ─── Defaults (overridable via .env or shell env) ───
 export SKILLDAG_SCALE="${SKILLDAG_SCALE:-200}"
 export SKILLDAG_WORKERS="${SKILLDAG_WORKERS:-3}"
+export SKILLDAG_CODEX_MODEL="${SKILLDAG_CODEX_MODEL:-gpt-5.2-codex}"
+export SKILLDAG_CODEX_REASONING_EFFORT="${SKILLDAG_CODEX_REASONING_EFFORT:-high}"
 export SKILLDAG_RUN_STAMP="${SKILLDAG_RUN_STAMP:-$(date +%Y%m%d_%H%M%S)}"
 export SKILLDAG_JOBS_DIR="${SKILLDAG_JOBS_DIR:-${REPO_ROOT}/results/skillsbench/${SKILLDAG_SCALE}_w${SKILLDAG_WORKERS}_${SKILLDAG_RUN_STAMP}}"
 export SKILLDAG_TASKS_DIR="${SKILLDAG_TASKS_DIR:-${REPO_ROOT}/results/skillsbench_tasks/tasks_skilldag_full_${SKILLDAG_SCALE}}"

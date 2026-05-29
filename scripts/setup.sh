@@ -161,21 +161,23 @@ fi
 # ─── 2. Verify SkillDAG graph artifacts (downloaded by scripts/download_data.sh) ───
 echo
 missing_graphs=0
-for graph_name in \
-  skillgraph_200.json \
-  skillgraph_500.json \
-  skillgraph_1000.json \
-  skillgraph_2000.json \
-  skillgraph_alfworld.json; do
-  if [ ! -f "${DATA_DIR}/skilldag_graphs/${graph_name}" ]; then
+missing_embeddings=0
+for scale in 200 500 1000 2000 alfworld; do
+  graph_file="${DATA_DIR}/skilldag_graphs/skillgraph_${scale}.json"
+  emb_file="${DATA_DIR}/skilldag_graphs/skillgraph_${scale}.embeddings.json"
+  if [ ! -f "${graph_file}" ]; then
     missing_graphs=1
-    break
+    echo "  missing graph: skillgraph_${scale}.json"
+  fi
+  if [ ! -f "${emb_file}" ]; then
+    missing_embeddings=1
+    echo "  missing embedding cache: skillgraph_${scale}.embeddings.json"
   fi
 done
 
-if [ "${missing_graphs}" = "0" ]; then
-  echo "[setup] found published SkillDAG graph artifacts under data/skilldag_graphs/"
-else
+if [ "${missing_graphs}" = "0" ] && [ "${missing_embeddings}" = "0" ]; then
+  echo "[setup] found published SkillDAG graph artifacts and embeddings under data/skilldag_graphs/"
+elif [ "${missing_graphs}" != "0" ]; then
   echo "[setup] graph artifacts are missing; rerun: bash scripts/download_data.sh --graphs"
   echo "        Or initialize graphs locally, for example:"
   echo "          skilldag initialize-graph \\"
@@ -183,6 +185,8 @@ else
   echo "            --graph-path data/skilldag_graphs/skillgraph_200.json"
   echo "        If your downloaded archive is flat, use data/skillsets/skills_200 instead."
   echo "        This requires SKILLDAG_EMBEDDING_API_KEY + SKILLDAG_LLM_API_KEY in .env."
+else
+  echo "[setup] embedding caches are missing; rerun: bash scripts/download_data.sh --graphs"
 fi
 
 echo

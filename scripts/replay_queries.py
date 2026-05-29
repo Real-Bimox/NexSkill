@@ -5,6 +5,7 @@ Usage:
   # Build query manifest from a completed SkillsBench run:
   python scripts/replay_queries.py --mode build-manifest \
     --trials-dir results/skillsbench/<exp>/ \
+    --gold-root results/skillsbench_tasks/tasks_skilldag_full_<scale>/ \
     --output analysis/queries.json
 
   # Cross-scale retrieval: rerun all queries against each scale's graph
@@ -106,11 +107,29 @@ def extract_search_queries(trial_dir: Path) -> list[str]:
     return list(dict.fromkeys(queries))  # dedupe, preserve order
 
 
-def load_gold_skills(trial_dir: Path) -> list[str]:
-    """Load ground-truth skill IDs for a trial from the task's gold_skills.json."""
+def load_gold_skills(trial_dir: Path, gold_root: Path | None = None) -> list[str]:
+    """Load ground-truth skill IDs for a trial from the task's gold_skills.json.
+
+    Args:
+        trial_dir: directory of a single trial run.
+        gold_root: root directory containing the task directories with gold_skills.json.
+                   If None, falls back to the old relative path heuristic.
+    """
     task_name = trial_dir.name
     if "__" in task_name:
         task_name = task_name.rsplit("__", 1)[0]
+
+    if gold_root is not None:
+        gold_path = gold_root / task_name / "environment" / "skilldag" / "gold_skills.json"
+        if gold_path.exists():
+            try:
+                data = load_json(gold_path)
+                return [str(s) for s in data.get("gold_skills", [])]
+            except (json.JSONDecodeError, OSError):
+                pass
+        return []
+
+    # Fallback heuristic for backwards compatibility
     gold_path = trial_dir.parent.parent / "tasks_skilldag_full_" / task_name / "environment" / "skilldag" / "gold_skills.json"
     if gold_path.exists():
         try:
@@ -121,7 +140,7 @@ def load_gold_skills(trial_dir: Path) -> list[str]:
     return []
 
 
-def build_manifest(trials_dir: Path, output: Path) -> dict[str, Any]:
+def build_manifest(trials_dir: Path, output: Path, gold_root: Path | None = None) -> dict[str, Any]:
     """Scan a completed run directory and produce a query manifest.
 
     The manifest maps task_id -> list of (query_string, gold_skill_ids).
@@ -136,20 +155,27 @@ def build_manifest(trials_dir: Path, output: Path) -> dict[str, Any]:
             task_name = task_name.rsplit("__", 1)[0]
 
         queries = extract_search_queries(trial)
-        gold = load_gold_skills(trial)
+        gold = load_gold_skills(trial, gold_root=gold_root)
 
         if task_name not in manifest:
             manifest[task_name] = []
         manifest[task_name].append({"queries": queries, "gold_skills": gold})
 
+    total_gold = sum(len(g) for entries in manifest.values() for g in entries if g)
+    if total_gold == 0:
+        print("ERROR: no gold_skills found in any trial — check --gold-root path", file=sys.stderr)
+        print("       The tasks directory should contain task/environment/skilldag/gold_skills.json files.", file=sys.stderr)
+        sys.exit(1)
+
     result = {
         "mode": "query_manifest",
         "trials_dir": str(trials_dir),
+        "gold_root": str(gold_root) if gold_root else None,
         "num_tasks": len(manifest),
         "tasks": manifest,
     }
     save_json(output, result)
-    print(f"Wrote query manifest ({len(manifest)} tasks) → {output}")
+    print(f"Wrote query manifest ({len(manifest)} tasks, {total_gold} gold entries) → {output}")
     return result
 
 
@@ -269,6 +295,7 @@ def main() -> int:
 
     m_build = sub.add_parser("build-manifest", help="Build query manifest from trial logs")
     m_build.add_argument("--trials-dir", type=Path, required=True, help="SkillsBench run directory")
+    m_build.add_argument("--gold-root", type=Path, help="Root of generated task directories containing gold_skills.json")
     m_build.add_argument("--output", type=Path, required=True, help="Output JSON path")
 
     m_cross = sub.add_parser("cross-scale", help="Cross-scale retrieval scoring")
@@ -286,7 +313,7 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.mode == "build-manifest":
-        build_manifest(args.trials_dir, args.output)
+        build_manifest(args.trials_dir, args.output, gold_root=getattr(args, 'gold_root', None))
     elif args.mode == "cross-scale":
         cross_scale(args.scales, args.graph_dir, args.query_manifest, args.output)
     elif args.mode == "edit-effect":

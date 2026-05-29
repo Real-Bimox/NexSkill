@@ -49,12 +49,12 @@ metrics: []
 agents:
   - name: codex
     import_path: null
-    model_name: openai/gpt-5.2-codex
+    model_name: ${SKILLDAG_CODEX_MODEL}
     override_timeout_sec: null
     override_setup_timeout_sec: 1800
     max_timeout_sec: null
     kwargs:
-      reasoning_effort: high
+      reasoning_effort: ${SKILLDAG_CODEX_REASONING_EFFORT}
 
 datasets:
   - task_names: null
