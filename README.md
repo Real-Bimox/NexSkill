@@ -1,13 +1,20 @@
 # SkillDAG
 
-Open-source reproduction repository for **SkillDAG: Self-Evolving Typed Skill Graphs for LLM Skill Selection at Scale**.
+**SkillDAG: Self-Evolving Typed Skill Graphs for LLM Skill Selection at Scale**
 
-This repo is for **benchmark rerun reproduction**:
+Open-source reproduction repository for the paper. Citation metadata is currently a placeholder and will be updated after the public paper record is available.
 
-- prepare the environment
-- download required benchmark assets
-- run ALFWorld / SkillsBench benchmarks
-- score and verify against expected paper numbers
+<img src="docs/agent_cli_flow.png" width="100%" alt="SkillDAG Workflow"/>
+
+## What is SkillDAG?
+
+As LLM agents adopt large skill libraries, selecting the right subset becomes a structural problem rather than a similarity-matching one: skills depend on, conflict with, specialize, or duplicate one another — a structure invisible to both full enumeration and embedding similarity.
+
+**SkillDAG** models inter-skill relationships as a typed directed graph and exposes it to an LLM agent as an inference-time, agent-callable structural retrieval interface:
+
+- `search` returns vector matches, typed-edge neighbors, and conflict signals
+- `propose-edge` / `edit-edge` let the agent register execution-backed edges
+- The graph accumulates structure across episodes
 
 ## What is in this repo
 
@@ -16,8 +23,18 @@ This repo is for **benchmark rerun reproduction**:
 - `benchmarks/` — ALFWorld + SkillsBench integration code
 - `analysis/` — scoring and post-hoc analysis helpers
 - `docs/reproducing.md` — fresh-clone walkthrough
-- `docs/paper_reproduction.md` — claim → command → verification contract
 - `artifacts/expected/` — expected paper-aligned metrics for verification
+
+## Prerequisites
+
+- Python ≥ 3.10 (python3.11 recommended)
+- Docker (for SkillsBench tasks)
+- `gettext` (for `envsubst`) — `brew install gettext` on macOS, `apt install gettext-base` on Debian/Ubuntu
+- An OpenAI-compatible chat API key
+
+**SkillsBench** also requires installing the Harbor framework first. See `docs/reproducing.md`.
+
+**ALFWorld** also requires running `alfworld-download` once to populate `ALFWORLD_DATA` (configured in `.env`).
 
 ## Quickstart
 
@@ -29,19 +46,15 @@ bash scripts/prepare_env.sh
 bash scripts/setup.sh
 ```
 
-`bash scripts/setup.sh` is the main setup entrypoint. It installs dependencies,
-downloads published SkillDAG graph artifacts, fetches skill libraries and
-SkillsBench tasks, and prepares the ALFWorld skill pool.
+## Benchmark Commands
 
-## End-to-end benchmark entrypoints
-
-### SkillsBench smoke
+### SkillsBench (200 tasks)
 
 ```bash
 SKILLDAG_SCALE=200 SKILLDAG_WORKERS=3 bash scripts/run_skillsbench.sh
 ```
 
-### ALFWorld smoke
+### ALFWorld (10 games)
 
 ```bash
 MAX_GAMES=10 bash scripts/run_alfworld.sh
@@ -60,15 +73,20 @@ bash scripts/run_alfworld_traintest.sh
 See:
 
 - `docs/reproducing.md`
-- `docs/paper_reproduction.md`
 - `REPRODUCIBILITY_CHECKLIST.md`
 
-## Notes
+## Citation
 
-- Primary documented backbone: OpenAI direct via `gpt-5.2-codex` defaults in `.env.example`
-- Optional alternative backbone: OpenRouter
-- Figure/table generation for the paper is **not** in scope for this repo
-- This repo is for rerunning benchmarks, not for replaying precomputed paper tables only
+Citation metadata is currently a placeholder and will be updated after the public paper record is available.
+
+```bibtex
+@misc{skilldag_placeholder,
+  title={SkillDAG: Self-Evolving Typed Skill Graphs for LLM Skill Selection at Scale},
+  author={SkillDAG Authors},
+  year={2026},
+  note={Citation placeholder}
+}
+```
 
 ## License
 

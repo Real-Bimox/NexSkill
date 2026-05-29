@@ -135,6 +135,7 @@ Requires all 4 scales to be run first:
 # Build query manifest from any completed run
 python scripts/replay_queries.py --mode build-manifest \
   --trials-dir results/skillsbench/<exp>/ \
+  --gold-root results/skillsbench_tasks/tasks_skilldag_full_<scale>/ \
   --output analysis/queries.json
 
 # Rerun all queries against each scale's graph
