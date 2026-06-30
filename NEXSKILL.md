@@ -50,13 +50,30 @@ and a plain-language message.
 
 ## Adding a skill
 
-Future skills require no core-code change in the ordinary case:
+Future skills require no core-code change in the ordinary case. The fastest way
+is the scaffold, which writes a valid package from the shipped template:
+
+```bash
+nexskill skill scaffold reviewing.checklist --repo . \
+  --name "Review Checklist" \
+  --summary "Runs a fixed review checklist over a change." \
+  --stage verifying
+nexskill skill validate --repo .
+nexskill plan "review a change" --repo .
+```
+
+By hand:
 
 1. Create a directory under `.nexskill/skills/<skill-id>/`.
 2. Add a `manifest.json` (`nexskill.skill.v1`).
 3. Add the skill body at the manifest `entrypoint` (typically `SKILL.md`).
 4. Run `nexskill skill validate` to confirm the manifest is valid.
 5. Run `nexskill plan "<task>"` to see it selected.
+
+See [docs/sdk/developing-skills.md](docs/sdk/developing-skills.md) for the full
+developer guide and [docs/sdk/manifest-schema.md](docs/sdk/manifest-schema.md)
+for the manifest field reference. Working examples are in
+[examples/skills/](examples/skills/).
 
 ### Minimal manifest
 
@@ -88,6 +105,8 @@ nexskill check [--repo <path>] [--json]
 nexskill closeout [--repo <path>] [--json]
 nexskill skill list [--repo <path>] [--json]
 nexskill skill validate [--repo <path>] [--json]
+nexskill skill scaffold <name> [--id <id>] [--name <name>] [--summary <text>]
+                          [--stage <stage>] [--force] [--repo <path>] [--json]
 ```
 
 ## How planning works

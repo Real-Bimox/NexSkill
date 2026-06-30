@@ -1,0 +1,13 @@
+{
+  "schema_version": "nexskill.skill.v1",
+  "id": "closing.summary-only",
+  "name": "Summary Only",
+  "summary": "Produces a minimal closeout summary without release notes, for changes that are not released.",
+  "stages": ["closing"],
+  "inputs": ["code_change"],
+  "outputs": ["closeout_summary"],
+  "depends_on": [],
+  "conflicts_with": ["closing.release-notes"],
+  "tags": ["development", "closing", "example"],
+  "entrypoint": "SKILL.md"
+}

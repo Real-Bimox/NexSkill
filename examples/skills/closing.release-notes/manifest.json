@@ -1,0 +1,13 @@
+{
+  "schema_version": "nexskill.skill.v1",
+  "id": "closing.release-notes",
+  "name": "Release Notes",
+  "summary": "Drafts concise release notes from the verified changes and evidence so the owner can decide what ships.",
+  "stages": ["closing"],
+  "inputs": ["code_change", "review_notes"],
+  "outputs": ["release_notes"],
+  "depends_on": ["reviewing.self-review"],
+  "conflicts_with": [],
+  "tags": ["development", "closing", "example"],
+  "entrypoint": "SKILL.md"
+}

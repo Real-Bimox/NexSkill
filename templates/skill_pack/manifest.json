@@ -1,0 +1,13 @@
+{
+  "schema_version": "nexskill.skill.v1",
+  "id": "${SKILL_ID}",
+  "name": "${SKILL_NAME}",
+  "summary": "${SKILL_SUMMARY}",
+  "stages": ["${SKILL_STAGE}"],
+  "inputs": [],
+  "outputs": [],
+  "depends_on": [],
+  "conflicts_with": [],
+  "tags": ["${SKILL_STAGE}"],
+  "entrypoint": "SKILL.md"
+}
