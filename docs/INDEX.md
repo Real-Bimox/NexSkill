@@ -11,6 +11,10 @@ vNext direction documents.
 
 ## NexSkill vNext direction
 
+- [Decision 0001](decisions/0001-nexskill-vnext-approved-direction.md) -
+  accepted direction: NexSkill vNext merges skills, skill graph, and proof.
+- [NexSkill vNext blueprint](blueprints/NEXSKILL-VNEXT-BLUEPRINT.md) -
+  approved blueprint for the first implementation path.
 - [NexSkill vNext proposal](proposals/NEXSKILL-VNEXT-PROPOSAL.md) - proposal
   to evolve NexSkill into the combined capability formed by the current NexSkill
   SkillDAG base, `Real-Bimox/agent-skills`, and portable deterministic AutoDev

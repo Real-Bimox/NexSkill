@@ -1,15 +1,13 @@
 # Proposal - NexSkill vNext
 
-**Status:** PROPOSAL - DRAFT
-**Lifecycle:** DRAFT -> IN_REVIEW -> APPROVED -> IMPLEMENTED
+**Status:** APPROVED DIRECTION - BUILD SPEC NEEDED
+**Lifecycle:** DRAFT -> APPROVED DIRECTION -> SPEC -> IMPLEMENTED
 **Established:** 2026-06-30
 **Owner:** Bahram Boutorabi
 **Triage tier:** **T2** - combines three independent capability sources into a
 new product/version contract: `Real-Bimox/NexSkill`, `Real-Bimox/agent-skills`,
 and portable AutoDev deterministic components.
-**Decision anchors:**
-[`0021-right-home-feature-placement.md`](../decisions/0021-right-home-feature-placement.md),
-[`0023-logic-placement-and-role-audit.md`](../decisions/0023-logic-placement-and-role-audit.md)
+**Decision anchor:** [`0001-nexskill-vnext-approved-direction.md`](../decisions/0001-nexskill-vnext-approved-direction.md)
 
 ---
 
@@ -29,9 +27,9 @@ The product promise:
 > NexSkill selects the right skills, tells agents how to use them, and proves the
 > development result with deterministic project evidence.
 
-This proposal is a product-direction proposal. It does not implement code, change
-AutoDev authority, merge the external repos, activate NexHarness, or grant any
-auto-merge/release/owner-gate authority.
+This proposal is now an approved product direction. It does not implement code,
+change AutoDev authority, merge the external repos, activate NexHarness, or grant
+any auto-merge/release/owner-gate authority.
 
 ## 2. Source inputs inspected
 
@@ -41,10 +39,8 @@ auto-merge/release/owner-gate authority.
 | `Real-Bimox/NexSkill` | GitHub HEAD `440068a6b6af6a20cbff2efd107969e317ab65f8`; current repo presents as SkillDAG | Product home and skill-graph/retrieval spine |
 | AutoDev | Current AutoDev `origin/main` at proposal time | Deterministic checks, evidence vocabulary, trust-boundary patterns |
 
-The local `/Users/bahramboutorabi/local-repos/NexSkill` folder is not itself a
-git checkout. It contains a minimal `AGENTS.md` plus a nested `agent-skills`
-checkout. This proposal treats the GitHub repo `Real-Bimox/NexSkill` as the
-product source of truth.
+The local `/Users/bahramboutorabi/local-repos/NexSkill` checkout now tracks the
+GitHub repo `Real-Bimox/NexSkill`, which is the product source of truth.
 
 ## 3. Problem
 
@@ -88,7 +84,9 @@ NexSkill vNext should merge these strengths into one product:
 ## 5. Non-goals
 
 - No replacement of AutoDev's factory gate.
-- No import of AutoDev's owner rules, role manuals, or `AGENTS.md` into NexSkill.
+- No wholesale import of AutoDev's owner rules, role manuals, or factory
+  authority into NexSkill. A NexSkill-owned `AGENTS.md` may adapt AutoDev's
+  portable operating discipline.
 - No Active Routing, auto-merge, release, protected-branch, or owner-gate
   authority.
 - No NexHarness runtime integration in this proposal.
@@ -110,8 +108,8 @@ NexSkill vNext should merge these strengths into one product:
 | AutoDev factory gate and owner policy | AutoDev only | These are AutoDev trust-boundary and governance surfaces. |
 | Runtime session hosting and learning loops | Future NexHarness adapter | NexHarness is the likely runtime host, but not part of this proposal. |
 
-This follows Decision 0021: the reusable product lives in NexSkill; AutoDev keeps
-its own governance and trusted gate.
+This follows Decision 0001: the reusable product lives in NexSkill; AutoDev
+keeps its own governance and trusted gate.
 
 ## 7. Proposed design
 
@@ -268,14 +266,18 @@ The build-ready spec should include:
 
 ## 11. Owner decision points
 
-1. Approve **NexSkill vNext** as the product direction that merges the three
-   capability sources named in this proposal?
-2. Confirm `Real-Bimox/NexSkill` as the product home, with AutoDev contributing
-   patterns and portable components rather than becoming a runtime dependency.
-3. Confirm the first MVP scope: SkillDAG compatibility, `agent-skills` corpus,
-   and the five deterministic evidence checks in §7.4.
-4. Confirm that NexSkill vNext has no AutoDev merge, owner-gate, Active Routing,
-   release, or protected-branch authority.
+Approved on 2026-06-30 by owner direction:
+
+1. **NexSkill vNext** is the product direction that merges the three capability
+   sources named in this proposal.
+2. `Real-Bimox/NexSkill` is the product home, with AutoDev contributing patterns
+   and portable components rather than becoming a runtime dependency.
+3. The first MVP scope is SkillDAG compatibility, the `agent-skills` corpus, and
+   the five deterministic evidence checks in §7.4.
+4. NexSkill vNext has no AutoDev merge, owner-gate, Active Routing, release, or
+   protected-branch authority.
+5. NexSkill should carry a project-owned `AGENTS.md` adapted from AutoDev's
+   reusable operating discipline.
 
 ## 12. Open questions
 
@@ -317,7 +319,7 @@ The build-ready spec should include:
 - [x] Every writer has an explicit allowlist - §6 and §13 keep product writes in NexSkill and AutoDev authority in AutoDev.
 - [x] Every multi-step handoff defines partial-failure behavior - §9 phases preserve compatibility and stop before runtime authority.
 - [x] Every durable artifact has ownership, collision, recovery, and deletion/supersede semantics - §8 names repo-local `.nexskill/*` artifacts; §13 names owning repos.
-- [x] Every repeated rule names its canonical source - §6 ties right-home placement to Decisions 0021/0023.
+- [x] Every repeated rule names its canonical source - §6 ties right-home placement to Decision 0001 and keeps AutoDev-specific authority in AutoDev.
 
 ### 14.3 Quality Checklist
 
@@ -343,7 +345,7 @@ The build-ready spec should include:
 |---|---|---|---|
 | `agent-skills` exposes 24 lifecycle skills | local checkout and installed skill inventory at `aba7c4e9695c363e65cb59effe926c7f1d1abe3d` | source inspection | supported |
 | current NexSkill repo is SkillDAG-shaped | read-only clone of `Real-Bimox/NexSkill` at `440068a6b6af6a20cbff2efd107969e317ab65f8` | source inspection | supported |
-| AutoDev deterministic components should remain authority-bound inside AutoDev | Decisions 0021/0023 and `AGENTS.md` trust-boundary rules | governance evidence | supported |
+| AutoDev deterministic components should remain authority-bound inside AutoDev | Decision 0001 and AutoDev source-pattern review | governance evidence | supported |
 | NexSkill vNext needs a spec before implementation | AutoDev proposal/spec lifecycle in `AGENTS.md` | process rule | supported |
 
 ### 14.5 Review Findings
@@ -352,11 +354,11 @@ The build-ready spec should include:
 |---|---|---|---|---|---|
 | P_-001 | | | | open | |
 
-### 14.6 Approval Criteria
+### 14.6 Direction Approval Record
 
-- [ ] No open P1 findings.
-- [ ] No open P2 findings unless explicitly accepted by owner.
-- [ ] Tests or verification cover every P1/P2 class found during review.
-- [ ] Open questions resolved or explicitly deferred.
-- [ ] All "fully resolves / closes" claims have full source-requirement coverage, or are reworded as partial/deferred/accepted risk.
-- [ ] Conditional touched surfaces and merge-order dependencies are resolved or explicitly deferred.
+- [x] Owner approved the product direction in Decision 0001.
+- [x] AutoDev authority, owner gates, merge authority, release authority, and
+  Active Routing remain excluded.
+- [x] NexSkill-owned `AGENTS.md` adaptation is allowed.
+- [ ] Build-ready implementation spec created.
+- [ ] Implementation verification run.

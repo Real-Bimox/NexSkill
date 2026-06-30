@@ -74,6 +74,7 @@ bash scripts/run_alfworld_traintest.sh
 
 See:
 
+- `docs/INDEX.md`
 - `docs/reproducing.md`
 
 ## Citation
