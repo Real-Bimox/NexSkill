@@ -1,11 +1,11 @@
 # NexSkill documentation index
 
-This index separates the current SkillDAG implementation docs from the NexSkill
-vNext direction documents.
+This index separates current implementation docs from NexSkill vNext direction
+documents.
 
 ## Current implementation
 
-- [Architecture](architecture.md) - SkillDAG architecture and repository design.
+- [Architecture](architecture.md) - current architecture and repository design.
 - [Reproducing](reproducing.md) - fresh-clone setup and benchmark walkthrough.
 - [Paper reproduction](paper_reproduction.md) - paper-aligned reproduction notes.
 
@@ -13,15 +13,16 @@ vNext direction documents.
 
 - [Decision 0001](decisions/0001-nexskill-vnext-approved-direction.md) -
   accepted direction: NexSkill vNext merges skills, skill graph, and proof.
+- [NexSkill integration plan](blueprints/NEXSKILL-INTEGRATION-PLAN.md) -
+  single coherent implementation plan for the NexSkill skill, graph, proof, and
+  report layers.
 - [NexSkill vNext blueprint](blueprints/NEXSKILL-VNEXT-BLUEPRINT.md) -
   approved blueprint for the first implementation path.
 - [NexSkill vNext proposal](proposals/NEXSKILL-VNEXT-PROPOSAL.md) - proposal
-  to evolve NexSkill into the combined capability formed by the current NexSkill
-  SkillDAG base, `Real-Bimox/agent-skills`, and portable deterministic AutoDev
-  development checks.
-- [Agent skills and portable AutoDev kit review](reviews/2026-06-30-agent-skills-and-portable-autodev-kit-review.md) -
-  review that explains how agent skills and deterministic AutoDev practices can
-  become a small reusable development acceleration kit.
+  to evolve NexSkill into the combined skill, graph, proof, and reporting
+  capability.
+- [Development acceleration review](reviews/2026-06-30-agent-skills-and-portable-autodev-kit-review.md) -
+  internal source review that informed the NexSkill integration direction.
 
 ## Project guidance
 

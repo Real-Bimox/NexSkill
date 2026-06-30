@@ -2,22 +2,24 @@
 
 > Standing rules for any AI agent working in this repository.
 > Owner: Bahram Boutorabi.
-> This file is adapted from AutoDev's operating discipline, but it is
-> NexSkill-owned. AutoDev's merge gates, role manuals, owner policy, and
-> factory authority do not transfer here unless separately approved.
+> This file is adapted from proven repository operating discipline, but it is
+> NexSkill-owned. External merge gates, role manuals, owner policy, and factory
+> authority do not transfer here unless separately approved.
 
 NexSkill is the product home for the combined development capability:
 
 ```text
-agent-skills guide the work
-SkillDAG selects and relates the skills
-AutoDev-style deterministic checks prove the result
+NexSkill guides the work
+NexSkill selects and relates the skills
+NexSkill proves the result
 ```
 
 The approved direction is recorded in
 [`docs/decisions/0001-nexskill-vnext-approved-direction.md`](docs/decisions/0001-nexskill-vnext-approved-direction.md)
 and the forward blueprint is
 [`docs/blueprints/NEXSKILL-VNEXT-BLUEPRINT.md`](docs/blueprints/NEXSKILL-VNEXT-BLUEPRINT.md).
+The single implementation plan for joining the layers coherently is
+[`docs/blueprints/NEXSKILL-INTEGRATION-PLAN.md`](docs/blueprints/NEXSKILL-INTEGRATION-PLAN.md).
 
 ## 0. Orientation - read this first
 
@@ -48,40 +50,55 @@ machine-attribution emojis or similar labels.
 Commit messages must end at the last substantive sentence. No trailers,
 signatures, or machine-attribution footers.
 
-## 2. What NexSkill is
+## 2. Product naming and source containment
+
+Use **NexSkill** as the product name throughout product docs, user-facing docs,
+CLI help, reports, examples, specs, and integration plans.
+
+Do not expose source project names, upstream repo names, vendor names, model
+names, or tool/provider brands in user-facing NexSkill surfaces unless there is a
+clear legal, license, security, or provenance reason.
+
+Source provenance may appear in internal decision records only when it is needed
+to preserve traceability. Even then, the user-facing capability name remains
+NexSkill.
+
+## 3. What NexSkill is
 
 NexSkill vNext merges three capabilities into one product:
 
-- `Real-Bimox/agent-skills` - reusable development skills and work discipline.
-- Current NexSkill/SkillDAG - typed skill graph, dependency-aware retrieval,
+- NexSkill skill discipline - reusable development skills and work flow.
+- NexSkill graph engine - typed relationships, dependency-aware retrieval,
   conflict signals, and online graph edits.
-- AutoDev-style deterministic components - portable checks that verify project
-  readiness, handoff quality, closeout quality, policy hygiene, and evidence.
+- NexSkill proof engine - portable checks that verify project readiness,
+  handoff quality, closeout quality, policy hygiene, and evidence.
 
 Standing tenets:
 
 - Skills guide the work; they are not authority.
-- SkillDAG selects a bounded skill bundle; it does not prove the work is ready.
+- NexSkill selects a bounded skill bundle; selection alone does not prove the
+  work is ready.
 - Deterministic checks prove local claims wherever practical.
 - NexSkill accelerates and verifies development; it does not automatically
   approve, merge, release, or satisfy owner gates.
-- AutoDev-specific authority stays in AutoDev.
-- NexHarness may later host NexSkill workflows, but it is not the source of
+- Authority from other projects stays outside NexSkill unless separately
+  approved.
+- Runtime hosts may later run NexSkill workflows, but they are not the source of
   NexSkill product truth.
 
-## 3. Stack and dependency policy
+## 4. Stack and dependency policy
 
-Current NexSkill is a Python package with a SkillDAG CLI and inert Markdown
+Current NexSkill is a Python package with a graph CLI and inert Markdown
 documentation.
 
-- Preserve existing `skilldag` behavior until a compatibility-preserving
-  migration introduces `nexskill` commands.
+- Preserve existing command behavior until a compatibility-preserving migration
+  introduces `nexskill` commands.
 - Keep deterministic proof scripts small, auditable, and dependency-light.
 - New runtime dependencies must be justified in a proposal/spec or decision.
 - Do not weaken existing benchmark, reproduction, or graph behavior while adding
   NexSkill vNext layers.
 
-## 4. How we work
+## 5. How we work
 
 For product-direction changes:
 
@@ -98,7 +115,7 @@ For implementation work, prefer this loop:
 scope -> plan -> test/check -> implement -> verify -> document -> commit -> push
 ```
 
-## 5. Branches and writer safety
+## 6. Branches and writer safety
 
 - `main` is the integration target and source of truth.
 - Use short-lived branches for non-trivial work.
@@ -109,7 +126,7 @@ scope -> plan -> test/check -> implement -> verify -> document -> commit -> push
 - Do not force-push, rewrite history, delete branches, or delete existing files
   without explicit owner approval.
 
-## 6. Halt-to-owner conditions
+## 7. Halt-to-owner conditions
 
 Stop and ask the owner before:
 
@@ -120,12 +137,12 @@ Stop and ask the owner before:
 - pushing directly to a protected branch;
 - creating a release or tag;
 - granting NexSkill any auto-merge, release, protected-branch, owner-gate, or
-  AutoDev authority;
+  external project authority;
 - accepting product risk from unresolved high-severity findings.
 
 Owner questions must be short and framed in product/user impact terms.
 
-## 7. Release policy
+## 8. Release policy
 
 A NexSkill version is not released until:
 
@@ -136,7 +153,7 @@ A NexSkill version is not released until:
 
 Release/tag actions require explicit owner approval.
 
-## 8. Owner-facing reporting
+## 9. Owner-facing reporting
 
 Keep owner updates concise, plain-language, and decision-focused.
 
