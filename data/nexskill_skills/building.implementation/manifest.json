@@ -1,0 +1,13 @@
+{
+  "schema_version": "nexskill.skill.v1",
+  "id": "building.implementation",
+  "name": "Implementation",
+  "summary": "Writes code in small, traceable slices that match an approved plan and the surrounding conventions.",
+  "stages": ["building"],
+  "inputs": ["implementation_plan", "repo_context"],
+  "outputs": ["code_change"],
+  "depends_on": ["planning.task-breakdown"],
+  "conflicts_with": [],
+  "tags": ["development", "building"],
+  "entrypoint": "SKILL.md"
+}

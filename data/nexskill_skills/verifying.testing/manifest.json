@@ -1,0 +1,13 @@
+{
+  "schema_version": "nexskill.skill.v1",
+  "id": "verifying.testing",
+  "name": "Verification and Testing",
+  "summary": "Adds and runs deterministic tests that prove the behavior claimed by a change.",
+  "stages": ["verifying"],
+  "inputs": ["code_change", "implementation_plan"],
+  "outputs": ["test_evidence"],
+  "depends_on": ["building.implementation"],
+  "conflicts_with": [],
+  "tags": ["development", "verifying", "testing"],
+  "entrypoint": "SKILL.md"
+}

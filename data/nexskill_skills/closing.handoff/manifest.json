@@ -1,0 +1,13 @@
+{
+  "schema_version": "nexskill.skill.v1",
+  "id": "closing.handoff",
+  "name": "Handoff and Closeout",
+  "summary": "Summarizes what changed, what was verified, and what remains so an owner can decide the next action.",
+  "stages": ["closing"],
+  "inputs": ["code_change", "test_evidence"],
+  "outputs": ["closeout_report"],
+  "depends_on": ["verifying.testing"],
+  "conflicts_with": [],
+  "tags": ["development", "closing", "documentation"],
+  "entrypoint": "SKILL.md"
+}

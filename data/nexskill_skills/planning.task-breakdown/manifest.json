@@ -1,0 +1,13 @@
+{
+  "schema_version": "nexskill.skill.v1",
+  "id": "planning.task-breakdown",
+  "name": "Task Breakdown",
+  "summary": "Breaks a development request into small, verifiable tasks before any code is written.",
+  "stages": ["planning"],
+  "inputs": ["task_request", "repo_context"],
+  "outputs": ["implementation_plan"],
+  "depends_on": [],
+  "conflicts_with": [],
+  "tags": ["development", "planning"],
+  "entrypoint": "SKILL.md"
+}
