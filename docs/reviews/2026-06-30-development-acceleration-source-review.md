@@ -1,4 +1,4 @@
-# Agent Skills and Portable AutoDev Kit Review
+# Development Acceleration Source Review
 
 **Status:** ADVISORY - RECOMMENDATIONS ONLY
 **Date:** 2026-06-30
