@@ -22,6 +22,8 @@ As LLM agents adopt large skill libraries, selecting the right subset becomes a 
 - `scripts/` — setup, data download, benchmark launchers, replay tools
 - `benchmarks/` — ALFWorld + SkillsBench integration code
 - `analysis/` — scoring and post-hoc analysis helpers
+- `docs/INDEX.md` — documentation entry point, including the NexSkill vNext
+  proposal and development acceleration review
 - `docs/reproducing.md` — fresh-clone walkthrough
 - `artifacts/expected/` — expected paper-aligned metrics for verification
 
