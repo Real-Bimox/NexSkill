@@ -36,6 +36,9 @@ documents.
 - [Round 1 foundation report](reports/2026-06-30-nexskill-round-1-foundation.md) -
   what landed, what was verified, and what remains after the first NexSkill
   development round.
+- [Round 2 graph + proof + polish report](reports/2026-06-30-nexskill-round-2-graph-proof-polish.md) -
+  graph-connected planner, portable default checks, latency evidence, report
+  snapshots, and a second-repo dogfood path.
 
 ## Project guidance
 

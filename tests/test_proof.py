@@ -167,6 +167,99 @@ class CloseoutEvidenceTests(unittest.TestCase):
         self.assertNotIn("abc123", blob)
 
 
+class DefaultBuiltinCheckTests(unittest.TestCase):
+    """Portable built-in checks: advisory, dependency-light, skip when their
+    precondition is absent, never block."""
+
+    def setUp(self):
+        self.repo = _Repo()
+
+    def tearDown(self):
+        self.repo.cleanup()
+
+    def test_default_config_enables_builtin_checks(self):
+        from nexskill.contracts import DEFAULT_BUILTIN_CHECKS
+
+        cfg = default_config("demo")
+        self.assertEqual(tuple(cfg.default_checks), DEFAULT_BUILTIN_CHECKS)
+
+    def test_builtins_run_and_do_not_block_on_clean_repo(self):
+        cfg = self.repo.add_config()  # default_config -> default_checks enabled
+        result = proof.run_checks(self.repo.root, config=cfg)
+        ids = [c.id for c in result.checks]
+        for cid in ("skills-valid", "report-hygiene", "git-clean"):
+            self.assertIn(cid, ids)
+        # advisory only: no blockers, status not failed
+        self.assertEqual(result.blockers, [])
+        self.assertNotEqual(result.status, "failed")
+
+    def test_git_clean_skips_when_not_a_repo(self):
+        cfg = self.repo.add_config()
+        result = proof.run_checks(self.repo.root, config=cfg)
+        git = next(c for c in result.checks if c.id == "git-clean")
+        self.assertEqual(git.status, "skipped")
+        self.assertFalse(git.required)
+
+    def test_skills_valid_warns_on_broken_manifest(self):
+        # Drop an invalid skill package so the registry skips it.
+        cfg = self.repo.add_config()
+        bad = self.repo.root / ".nexskill" / "skills" / "broken"
+        bad.mkdir(parents=True, exist_ok=True)
+        (bad / "manifest.json").write_text("{not valid", encoding="utf-8")
+        result = proof.run_checks(self.repo.root, config=cfg)
+        sv = next(c for c in result.checks if c.id == "skills-valid")
+        self.assertEqual(sv.status, "warning")
+        self.assertFalse(sv.required)
+        # warning, never a blocker
+        self.assertNotIn("skills-valid", " ".join(result.blockers))
+
+    def test_unknown_builtin_is_skipped_not_fatal(self):
+        from nexskill.contracts import (
+            CONFIG_SCHEMA_VERSION,
+            ProjectConfig,
+            SkillSource,
+        )
+
+        cfg = ProjectConfig(
+            schema_version=CONFIG_SCHEMA_VERSION,
+            project_name="demo",
+            skill_sources=[SkillSource(type="local", path=".nexskill/skills")],
+            checks=[],
+            default_checks=["does-not-exist"],
+            policies={"product_name": "NexSkill", "forbid_source_names_in_reports": True},
+        )
+        self.repo.write_config(cfg)
+        result = proof.run_checks(self.repo.root, config=cfg)
+        unknown = next(c for c in result.checks if c.id == "does-not-exist")
+        self.assertEqual(unknown.status, "skipped")
+        self.assertEqual(result.blockers, [])
+
+
+class LatencyEvidenceTests(unittest.TestCase):
+    def setUp(self):
+        self.repo = _Repo()
+
+    def tearDown(self):
+        self.repo.cleanup()
+
+    def test_closeout_records_duration_when_supplied(self):
+        self.repo.add_config()
+        proof.closeout(self.repo.root, duration_ms=7)
+        ev = proof.read_evidence(self.repo.root)[-1]
+        self.assertEqual(ev.data.get("duration_ms"), 7)
+
+    def test_plan_records_duration_when_supplied(self):
+        proof.record_plan(self.repo.root, {"steps": [{}], "stages": ["planning"]}, duration_ms=3)
+        ev = proof.read_evidence(self.repo.root)[-1]
+        self.assertEqual(ev.data.get("duration_ms"), 3)
+
+    def test_duration_omitted_when_absent(self):
+        self.repo.add_config()
+        proof.closeout(self.repo.root)
+        ev = proof.read_evidence(self.repo.root)[-1]
+        self.assertNotIn("duration_ms", ev.data)
+
+
 class InitPlanEvidenceTests(unittest.TestCase):
     def setUp(self):
         self.repo = _Repo()

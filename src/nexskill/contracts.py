@@ -32,6 +32,35 @@ CONFIG_SCHEMA_VERSION = "nexskill.config.v1"
 SKILL_SCHEMA_VERSION = "nexskill.skill.v1"
 EVIDENCE_SCHEMA_VERSION = "nexskill.evidence.v1"
 REPORT_SCHEMA_VERSION = "nexskill.report.v1"
+GRAPH_SCHEMA_VERSION = "nexskill.graph.v1"
+
+# ---------------------------------------------------------------------------
+# Graph relationship vocabulary
+# ---------------------------------------------------------------------------
+#
+# NexSkill plans over a small typed-edge graph. Manifest declarations supply the
+# baseline edges (``depends_on``, ``conflicts_with``); an optional, NexSkill-owned
+# overlay (``.nexskill/graph.json``) can add the richer relationships below. The
+# vocabulary is intentionally the same five typed relations used across NexSkill
+# so a single mental model covers manifests and overlays alike.
+
+#: Every relationship type the NexSkill graph understands.
+GRAPH_EDGE_TYPES = (
+    "depends_on",
+    "composes_with",
+    "specializes",
+    "similar_to",
+    "conflicts_with",
+)
+
+#: Relationships that are direction-independent (A~B implies B~A).
+GRAPH_SYMMETRIC_EDGE_TYPES = ("composes_with", "similar_to", "conflicts_with")
+
+#: Relationships the planner is allowed to traverse when expanding a path.
+#: ``conflicts_with`` is deliberately excluded: it is a "do not co-select"
+#: signal, not a navigable relation, so walking it would pull in skills the plan
+#: is meant to keep apart.
+GRAPH_WALKABLE_EDGE_TYPES = ("depends_on", "specializes", "composes_with", "similar_to")
 
 #: The only product name permitted in user-facing NexSkill surfaces.
 PRODUCT_NAME = "NexSkill"
@@ -294,6 +323,7 @@ class ProjectConfig:
     skill_sources: list[SkillSource]
     checks: list[CheckConfig]
     policies: dict[str, Any]
+    default_checks: list[str] = field(default_factory=list)
     unknown: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -325,7 +355,15 @@ class ProjectConfig:
         if not isinstance(policies, dict):
             raise NexSkillError("CONFIG_INVALID", "policies must be an object")
 
-        known_top = {"schema_version", "project_name", "skill_sources", "checks", "policies"}
+        dc_raw = raw.get("default_checks", [])
+        if not isinstance(dc_raw, list):
+            raise NexSkillError("CONFIG_INVALID", "default_checks must be a list")
+        default_checks = [c.strip() for c in dc_raw if isinstance(c, str) and c.strip()]
+
+        known_top = {
+            "schema_version", "project_name", "skill_sources", "checks",
+            "policies", "default_checks",
+        }
         unknown = {k: v for k, v in raw.items() if k not in known_top}
 
         return cls(
@@ -334,6 +372,7 @@ class ProjectConfig:
             skill_sources=skill_sources,
             checks=checks,
             policies=dict(policies),
+            default_checks=default_checks,
             unknown=unknown,
         )
 
@@ -346,22 +385,34 @@ class ProjectConfig:
             "checks": [
                 {"id": c.id, "command": c.command, "required": c.required} for c in self.checks
             ],
+            "default_checks": list(self.default_checks),
             "policies": dict(self.policies),
         }
+
+
+#: Portable, dependency-light built-in checks enabled by ``nexskill init``.
+#: Every one of these is safe on any repository: it needs no external tools
+#: beyond optional git, never fails the build (failures surface as warnings),
+#: and degrades to ``skipped`` when its precondition is absent. See
+#: ``nexskill.proof`` for the implementations.
+DEFAULT_BUILTIN_CHECKS = ("skills-valid", "report-hygiene", "git-clean")
 
 
 def default_config(project_name: str) -> ProjectConfig:
     """A safe starter config for ``nexskill init``.
 
     It declares the standard local skill source, no required external-command
-    checks, and the default NexSkill policies. Adding checks is a later,
-    explicit project choice — a fresh project must work out of the box.
+    checks, a portable built-in default-check set, and the default NexSkill
+    policies. The built-in checks are advisory and dependency-light, so a fresh
+    project gets a meaningful ``check`` out of the box while still working
+    without any external tools.
     """
     return ProjectConfig(
         schema_version=CONFIG_SCHEMA_VERSION,
         project_name=project_name,
         skill_sources=[SkillSource(type="local", path=DEFAULT_SKILL_SOURCE_PATH)],
         checks=[],
+        default_checks=list(DEFAULT_BUILTIN_CHECKS),
         policies={
             "product_name": PRODUCT_NAME,
             "forbid_source_names_in_reports": True,

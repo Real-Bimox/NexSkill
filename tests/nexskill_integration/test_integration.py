@@ -123,6 +123,113 @@ class DogfoodOnSelfTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr)
 
 
+class SecondRepoDogfoodTests(unittest.TestCase):
+    """A second, independent repository with a project-specific skill added by
+    manifest alone runs the full sequence — proving portability and the
+    no-core-code-change extension rule."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _add_custom_skill(self):
+        pkg = self.repo / ".nexskill" / "skills" / "deploying.release-prep"
+        pkg.mkdir(parents=True, exist_ok=True)
+        manifest = {
+            "schema_version": "nexskill.skill.v1",
+            "id": "deploying.release-prep",
+            "name": "Release Preparation",
+            "summary": "Prepares a deployment by checking version and changelog readiness.",
+            "stages": ["closing"],
+            "inputs": ["closeout_report"],
+            "outputs": ["release_candidate"],
+            "depends_on": [],
+            "conflicts_with": [],
+            "tags": ["deploying", "release"],
+            "entrypoint": "SKILL.md",
+        }
+        (pkg / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (pkg / "SKILL.md").write_text("# Release Preparation\n", encoding="utf-8")
+
+    def test_custom_skill_added_by_manifest_only(self):
+        env = os.environ
+        _run(["init", "--repo", ".", "--project-name", "second-repo"], cwd=str(self.repo), env=env)
+        self._add_custom_skill()
+
+        # validate: registry accepts the new package with no code change
+        proc = _run(["skill", "validate", "--repo", ".", "--json"], cwd=str(self.repo), env=env)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue(json.loads(proc.stdout)["result"]["valid"])
+
+        # list: the new skill is discoverable
+        proc = _run(["skill", "list", "--repo", ".", "--json"], cwd=str(self.repo), env=env)
+        ids = [s["id"] for s in json.loads(proc.stdout)["result"]["skills"]]
+        self.assertIn("deploying.release-prep", ids)
+
+        # plan: a matching task selects the new skill
+        proc = _run(["plan", "prepare a release deployment", "--repo", ".", "--json"], cwd=str(self.repo), env=env)
+        plan = json.loads(proc.stdout)
+        plan_ids = [s["skill_id"] for s in plan["result"]["steps"]]
+        self.assertIn("deploying.release-prep", plan_ids)
+
+        # full closeout still works on the second repo
+        proc = _run(["closeout", "--repo", ".", "--json"], cwd=str(self.repo), env=env)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue(json.loads(proc.stdout)["ok"])
+
+    def test_plan_records_latency_evidence(self):
+        env = os.environ
+        _run(["init", "--repo", "."], cwd=str(self.repo), env=env)
+        _run(["plan", "build a development change", "--repo", "."], cwd=str(self.repo), env=env)
+        evpath = self.repo / ".nexskill" / "evidence.jsonl"
+        plan_events = [
+            json.loads(ln) for ln in evpath.read_text(encoding="utf-8").splitlines()
+            if ln.strip() and json.loads(ln)["op"] == "plan"
+        ]
+        self.assertTrue(plan_events)
+        self.assertIn("duration_ms", plan_events[-1]["data"])
+
+
+class GraphOverlayPlanTests(unittest.TestCase):
+    """An optional .nexskill/graph.json overlay enriches planning; an invalid
+    overlay fails closed."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self.tmp.name)
+        _run(["init", "--repo", "."], cwd=str(self.repo), env=os.environ)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_invalid_overlay_fails_closed(self):
+        overlay = self.repo / ".nexskill" / "graph.json"
+        overlay.write_text('{"schema_version": "wrong", "edges": []}', encoding="utf-8")
+        proc = _run(["plan", "build a change", "--repo", ".", "--json"], cwd=str(self.repo), env=os.environ)
+        self.assertNotEqual(proc.returncode, 0)
+        payload = json.loads(proc.stdout)
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["error"]["code"], "GRAPH_INVALID")
+
+    def test_overlay_edge_count_reported(self):
+        overlay = self.repo / ".nexskill" / "graph.json"
+        overlay.write_text(
+            json.dumps({
+                "schema_version": "nexskill.graph.v1",
+                "edges": [{"source": "planning.task-breakdown",
+                           "target": "closing.handoff", "type": "composes_with"}],
+            }),
+            encoding="utf-8",
+        )
+        proc = _run(["plan", "plan the work", "--repo", ".", "--json"], cwd=str(self.repo), env=os.environ)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        result = json.loads(proc.stdout)["result"]
+        self.assertEqual(result["graph"]["overlay_edges"], 1)
+
+
 class NamingAndPolicyScanTests(unittest.TestCase):
     """Generated reports must contain no forbidden source names."""
 

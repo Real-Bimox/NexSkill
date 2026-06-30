@@ -1,20 +1,21 @@
 """NexSkill graph planner.
 
-Produces a bounded, deterministic skill path for a task using manifest metadata
-only — stages, tags, inputs/outputs, and declared ``depends_on`` /
-``conflicts_with`` relationships. No embeddings, no network, no API keys: the
-planner is reproducible for the same registry and task input.
+Produces a bounded, deterministic skill path for a task. Selection is offline and
+reproducible — no embeddings, no network, no API keys — and runs in two stages:
 
-Selection model:
+1. **Seed by relevance.** Score every skill against the task by lexical overlap
+   of the task tokens with the skill's name, summary, tags, inputs, outputs, and
+   stages. The top-scoring skills (bounded by :data:`MAX_SEEDS`) seed the path.
+2. **Expand over the graph.** Walk the NexSkill skill graph
+   (:class:`nexskill.graph.SkillGraph`) outward from the seeds: first the
+   guaranteed ``depends_on`` prerequisite closure, then the other navigable
+   relationships (``composes_with`` / ``specializes`` / ``similar_to``) up to the
+   :data:`MAX_STEPS` budget. ``conflicts_with`` is never traversed; declared
+   conflicts inside the selected set are surfaced as advisory signals instead.
 
-1. Score every skill against the task by lexical overlap of the task tokens with
-   the skill's name, summary, tags, inputs, and outputs.
-2. Seed the path with skills whose score is above a small threshold, capped to a
-   bounded number of seeds.
-3. Expand transitive ``depends_on`` so prerequisites are included.
-4. Order steps by the canonical stage pipeline, then by skill id (deterministic).
-5. Surface any ``conflicts_with`` pairs inside the selected set as advisory
-   signals — never silently chosen.
+With no overlay graph the walkable edges reduce to manifest ``depends_on``, so a
+manifest-only project plans exactly as before. An overlay enriches the same walk
+without any core-code change.
 
 The planner advises; it never claims the selected skills prove work readiness.
 """
@@ -24,14 +25,15 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .contracts import PlanResult, PlanStep
+from .contracts import NexSkillError, PlanResult, PlanStep
+from .graph import SkillGraph
 from .registry import LoadedSkill, SkillRegistry
 
 #: Canonical ordering of stages in a development workflow. Skills whose stage is
 #: not listed here are appended after known stages, sorted by id.
 STAGE_PIPELINE = ("planning", "building", "verifying", "closing")
 
-#: Max seed skills selected by lexical score before dependency expansion.
+#: Max seed skills selected by lexical score before graph expansion.
 MAX_SEEDS = 6
 #: Max total steps in a plan (the path must stay bounded).
 MAX_STEPS = 12
@@ -39,6 +41,14 @@ MAX_STEPS = 12
 SEED_SCORE_FLOOR = 1
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+#: Human-readable phrase for each navigable edge type, used in step reasons.
+_EDGE_REASON = {
+    "depends_on": "Included as a prerequisite (depends_on).",
+    "composes_with": "Related to a selected skill (composes_with).",
+    "specializes": "Related to a selected skill (specializes).",
+    "similar_to": "Related to a selected skill (similar_to).",
+}
 
 
 def _tokens(text: str) -> set[str]:
@@ -86,55 +96,38 @@ def _stage_rank(stage: str) -> tuple[int, str]:
 
 
 class GraphPlanner:
-    """Bounded, deterministic metadata planner."""
+    """Bounded, deterministic graph planner."""
 
-    def __init__(self, registry: SkillRegistry) -> None:
+    def __init__(self, registry: SkillRegistry, graph: SkillGraph | None = None) -> None:
         self._registry = registry
+        # Default to a manifest-only graph so the planner works without an
+        # overlay; callers (the CLI) pass an overlay-enriched graph when present.
+        self._graph = graph if graph is not None else SkillGraph.from_registry(registry)
 
     def plan(self, task: str) -> PlanResult:
         task = (task or "").strip()
         if not task:
-            from .contracts import NexSkillError
             raise NexSkillError("PLAN_NO_TASK", "A task description is required for planning.")
 
         task_tokens = _tokens(task) - _STOPWORDS
 
         # 1. Score and seed.
-        scored: list[_ScoredSeed] = []
-        for skill in self._registry.all():
-            score = _score_skill(task_tokens, skill)
-            if score >= SEED_SCORE_FLOOR:
-                scored.append(_ScoredSeed(skill, score))
-        if not scored:
-            # No lexical match: fall back to a bounded planning-stage default so
-            # the user still gets a useful path rather than an empty plan.
-            scored = [
-                _ScoredSeed(skill, 0)
-                for skill in self._registry.by_stage("planning")[:MAX_SEEDS]
-            ]
-            if not scored and self._registry.all():
-                # Last resort: the alphabetically-first skills, bounded.
-                scored = [_ScoredSeed(skill, 0) for skill in self._registry.all()[:MAX_SEEDS]]
-
-        # Sort seeds by descending score, then id for determinism, then cap.
+        scored = self._seed(task_tokens)
         scored.sort(key=lambda s: (-s.score, s.skill.id))
-        seeds = [s.skill for s in scored[:MAX_SEEDS]]
+        seeds = [s.skill.id for s in scored[:MAX_SEEDS]]
 
-        # 2. Expand transitive dependencies.
-        selected_ids: list[str] = []
-        selected_set: set[str] = set()
-        self._expand_deps(seeds, selected_ids, selected_set)
+        # 2. Guarantee the depends_on prerequisite closure of the seeds, then
+        #    expand over the rest of the navigable graph within budget.
+        provenance = self._select(seeds)
+        selected_ids = list(provenance.keys())[:MAX_STEPS]
 
-        # 3. Resolve loaded skills and order by stage then id.
+        # 3. Resolve and order by stage then id (deterministic).
         selected = [self._registry.require(sid) for sid in selected_ids]
         selected.sort(key=lambda s: (min(_stage_rank(st)[0] for st in s.manifest.stages), s.id))
 
-        # 4. Bound the path.
-        selected = selected[:MAX_STEPS]
-
-        # 5. Surface conflicts inside the selected set (advisory).
-        conflicts = self._collect_conflicts(selected_set)
-        warnings = self._collect_warnings(task, selected, scored, conflicts)
+        # 4. Surface conflicts inside the selected set (advisory) and warnings.
+        conflicts = self._graph.collect_conflicts(selected_ids)
+        warnings = self._collect_warnings(selected, scored, conflicts)
 
         steps = [
             PlanStep(
@@ -142,14 +135,13 @@ class GraphPlanner:
                 name=s.manifest.name,
                 summary=s.manifest.summary,
                 stage=s.manifest.stages[0],
-                reason=self._reason_for(s, scored),
+                reason=self._reason_for(s.id, scored, provenance),
             )
             for s in selected
         ]
-        stages_seen: list[str] = []
-        for st in STAGE_PIPELINE:
-            if any(st in s.manifest.stages for s in selected):
-                stages_seen.append(st)
+        stages_seen = [
+            st for st in STAGE_PIPELINE if any(st in s.manifest.stages for s in selected)
+        ]
 
         return PlanResult(
             task=task,
@@ -161,53 +153,53 @@ class GraphPlanner:
 
     # ------------------------------------------------------------------
 
-    def _expand_deps(
-        self,
-        seeds: list[LoadedSkill],
-        ordered: list[str],
-        seen: set[str],
-    ) -> None:
-        """Add seeds and their transitive ``depends_on`` in dependency-first
-        order using DFS, de-duplicated."""
-        stack = list(seeds)
-        # Process in reverse so earlier seeds land first when deps tie.
-        for skill in reversed(stack):
-            self._dfs(skill.id, ordered, seen, [])
+    def _seed(self, task_tokens: set[str]) -> list[_ScoredSeed]:
+        scored: list[_ScoredSeed] = []
+        for skill in self._registry.all():
+            score = _score_skill(task_tokens, skill)
+            if score >= SEED_SCORE_FLOOR:
+                scored.append(_ScoredSeed(skill, score))
+        if scored:
+            return scored
+        # No lexical match: fall back to a bounded planning-stage default so the
+        # user still gets a useful path rather than an empty plan.
+        fallback = [_ScoredSeed(s, 0) for s in self._registry.by_stage("planning")[:MAX_SEEDS]]
+        if not fallback and self._registry.all():
+            fallback = [_ScoredSeed(s, 0) for s in self._registry.all()[:MAX_SEEDS]]
+        return fallback
 
-    def _dfs(self, skill_id: str, ordered: list[str], seen: set[str], path: list[str]) -> None:
-        if skill_id in seen:
-            return
-        if skill_id in path:
-            # Dependency cycle declared in manifests — record nothing, avoid
-            # infinite recursion. The planner stays total.
-            return
-        skill = self._registry.get(skill_id)
-        if skill is None:
-            return
-        # Dependencies first (prerequisites before dependents).
-        for dep in skill.manifest.depends_on:
-            self._dfs(dep, ordered, seen, path + [skill_id])
-        if skill_id in seen:
-            return
-        seen.add(skill_id)
-        ordered.append(skill_id)
+    def _select(self, seeds: list[str]) -> dict[str, dict[str, str]]:
+        """Build the ordered selected set with edge provenance.
 
-    def _collect_conflicts(self, selected_set: set[str]) -> list[dict[str, str]]:
-        pairs: list[tuple[str, str]] = []
-        for sid in sorted(selected_set):
-            skill = self._registry.get(sid)
-            if skill is None:
-                continue
-            for other in skill.manifest.conflicts_with:
-                if other in selected_set:
-                    a, b = sorted((sid, other))
-                    if (a, b) not in pairs:
-                        pairs.append((a, b))
-        return [{"source": a, "target": b, "type": "conflicts_with"} for a, b in pairs]
+        Prerequisites (``depends_on`` closure) are guaranteed first so a plan is
+        never missing a declared dependency; the remaining budget is then filled
+        by a bounded walk over the other navigable edges.
+        """
+        provenance: dict[str, dict[str, str]] = {}
+
+        def visit_prereqs(sid: str, stack: tuple[str, ...]) -> None:
+            if sid in stack:  # declared dependency cycle — stay total
+                return
+            for neighbor, etype in self._graph.neighbors(sid, "depends_on"):
+                if neighbor not in provenance:
+                    visit_prereqs(neighbor, stack + (sid,))
+                    provenance.setdefault(neighbor, {"via": sid, "edge": "depends_on"})
+
+        for sid in seeds:
+            if sid not in provenance:
+                provenance[sid] = {"via": "", "edge": ""}
+            visit_prereqs(sid, ())
+
+        # Fill remaining budget with other navigable relationships.
+        if len(provenance) < MAX_STEPS:
+            for entry in self._graph.bounded_expand(list(provenance.keys()), MAX_STEPS):
+                sid = entry["id"]
+                if sid not in provenance:
+                    provenance[sid] = {"via": entry["via"], "edge": entry["edge"]}
+        return provenance
 
     def _collect_warnings(
         self,
-        task: str,
         selected: list[LoadedSkill],
         scored: list[_ScoredSeed],
         conflicts: list[dict[str, str]],
@@ -215,7 +207,7 @@ class GraphPlanner:
         warnings: list[str] = []
         if not selected:
             warnings.append("No skills matched the task; the registry may be empty.")
-        if any(s.score == 0 for s in scored) and scored:
+        if scored and all(s.score == 0 for s in scored):
             warnings.append(
                 "Task had no strong keyword match; a default skill path was returned. "
                 "Refine the task description for a tighter selection."
@@ -226,10 +218,16 @@ class GraphPlanner:
             )
         return warnings
 
-    def _reason_for(self, skill: LoadedSkill, scored: list[_ScoredSeed]) -> str:
-        match = next((s for s in scored if s.skill.id == skill.id), None)
+    def _reason_for(
+        self,
+        skill_id: str,
+        scored: list[_ScoredSeed],
+        provenance: dict[str, dict[str, str]],
+    ) -> str:
+        match = next((s for s in scored if s.skill.id == skill_id), None)
         if match and match.score > 0:
             return f"Matched the task by {match.score} keyword(s)."
-        if any(skill.id == d for s in self._registry.all() for d in s.manifest.depends_on):
-            return "Included as a declared dependency of another selected skill."
+        edge = provenance.get(skill_id, {}).get("edge", "")
+        if edge in _EDGE_REASON:
+            return _EDGE_REASON[edge]
         return "Selected as a default planning-stage skill."

@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 from nexskill.contracts import NexSkillError, SKILL_SCHEMA_VERSION, SkillSource
+from nexskill.graph import GraphEdge, SkillGraph
 from nexskill.planner import GraphPlanner
 from nexskill.registry import SkillRegistry
 
@@ -128,6 +129,59 @@ class PlannerCoreTests(unittest.TestCase):
         result = planner.plan("development change")
         blob = json.dumps(result.to_dict())
         self.assertNotIn("# body", blob)
+
+
+class PlannerGraphOverlayTests(unittest.TestCase):
+    """An overlay graph pulls related skills into the path beyond manifest
+    depends_on, while keeping the result bounded and deterministic."""
+
+    def setUp(self):
+        self.repo = _Repo()
+        self.repo.add(
+            "building.implementation",
+            name="Implementation",
+            summary="Writes code for a development change.",
+            stages=["building"], tags=["building"],
+        )
+        # A skill with no keyword overlap and no depends_on relation to the
+        # seed — only an overlay composes_with edge connects it.
+        self.repo.add(
+            "verifying.smoke",
+            name="Smoke",
+            summary="Runs a quick confidence pass.",
+            stages=["verifying"], tags=["verifying"],
+        )
+        self.registry = self.repo.registry()
+
+    def tearDown(self):
+        self.repo.cleanup()
+
+    def test_overlay_edge_pulls_related_skill(self):
+        overlay = [GraphEdge("building.implementation", "verifying.smoke", "composes_with")]
+        graph = SkillGraph.from_registry(self.registry, overlay)
+        planner = GraphPlanner(self.registry, graph)
+        result = planner.plan("development change")
+        ids = [s.skill_id for s in result.steps]
+        self.assertIn("building.implementation", ids)  # keyword seed
+        self.assertIn("verifying.smoke", ids)  # pulled via composes_with overlay
+        smoke = next(s for s in result.steps if s.skill_id == "verifying.smoke")
+        self.assertIn("composes_with", smoke.reason)
+
+    def test_without_overlay_related_skill_not_pulled(self):
+        # Manifest-only graph: no composes_with edge, so the unrelated skill
+        # stays out — proving the overlay (not a behavior change) added it.
+        planner = GraphPlanner(self.registry)  # manifest-only graph
+        result = planner.plan("development change")
+        ids = [s.skill_id for s in result.steps]
+        self.assertIn("building.implementation", ids)
+        self.assertNotIn("verifying.smoke", ids)
+
+    def test_overlay_plan_is_deterministic(self):
+        overlay = [GraphEdge("building.implementation", "verifying.smoke", "composes_with")]
+        graph = SkillGraph.from_registry(self.registry, overlay)
+        planner = GraphPlanner(self.registry, graph)
+        self.assertEqual(planner.plan("development change").to_dict(),
+                         planner.plan("development change").to_dict())
 
 
 class PlannerConflictTests(unittest.TestCase):

@@ -231,6 +231,120 @@ def _config_integrity_check(repo_root: Path) -> CheckOutcome:
     )
 
 
+# ---------------------------------------------------------------------------
+# Portable built-in checks
+# ---------------------------------------------------------------------------
+#
+# These run with no owner configuration and no external tooling beyond optional
+# git. They are advisory by design (``required=False``): the worst outcome is a
+# warning, never a blocker, and any check whose precondition is absent reports
+# ``skipped``. That keeps a fresh project's ``check`` meaningful without ever
+# turning a portable default into a build gate.
+
+
+def _builtin_skills_valid(repo_root: Path, config: ProjectConfig) -> CheckOutcome:
+    """Every discovered skill manifest is valid (none skipped)."""
+    from .registry import SkillRegistry
+
+    _registry, report = SkillRegistry.load(config.skill_sources, repo_root)
+    if report.skipped:
+        return CheckOutcome(
+            id="skills-valid", command="(internal)", required=False,
+            status="warning",
+            message=f"{len(report.skipped)} skill manifest(s) failed validation.",
+        )
+    return CheckOutcome(
+        id="skills-valid", command="(internal)", required=False,
+        status="passed",
+        message=f"{len(report.loaded)} skill manifest(s) valid.",
+    )
+
+
+def _builtin_report_hygiene(repo_root: Path, config: ProjectConfig) -> CheckOutcome:
+    """Generated reports and evidence carry no forbidden source/provider names."""
+    from .report import FORBIDDEN_SOURCE_NAMES
+
+    targets = [
+        reports_dir(repo_root) / "latest.json",
+        reports_dir(repo_root) / "latest.md",
+        evidence_path(repo_root),
+    ]
+    blob = ""
+    for path in targets:
+        if path.exists():
+            blob += path.read_text(encoding="utf-8", errors="ignore").lower()
+    if not blob:
+        return CheckOutcome(
+            id="report-hygiene", command="(internal)", required=False,
+            status="skipped", message="No generated reports or evidence yet.",
+        )
+    found = sorted({name for name in FORBIDDEN_SOURCE_NAMES if name.lower() in blob})
+    if found:
+        return CheckOutcome(
+            id="report-hygiene", command="(internal)", required=False,
+            status="warning",
+            message=f"{len(found)} forbidden source name(s) found in generated output.",
+        )
+    return CheckOutcome(
+        id="report-hygiene", command="(internal)", required=False,
+        status="passed", message="Generated output is free of forbidden source names.",
+    )
+
+
+def _builtin_git_clean(repo_root: Path, config: ProjectConfig) -> CheckOutcome:
+    """The working tree has no uncommitted changes (advisory)."""
+    if not (repo_root / ".git").exists():
+        return CheckOutcome(
+            id="git-clean", command="(internal)", required=False,
+            status="skipped", message="Not a git repository; skipped.",
+        )
+    try:
+        proc = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=str(repo_root), capture_output=True, text=True, timeout=CHECK_TIMEOUT_S,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return CheckOutcome(
+            id="git-clean", command="(internal)", required=False,
+            status="skipped", message="git unavailable; skipped.",
+        )
+    if proc.returncode != 0:
+        return CheckOutcome(
+            id="git-clean", command="(internal)", required=False,
+            status="skipped", message="git status unavailable; skipped.",
+        )
+    dirty = [ln for ln in proc.stdout.splitlines() if ln.strip()]
+    if dirty:
+        return CheckOutcome(
+            id="git-clean", command="(internal)", required=False,
+            status="warning", message=f"Working tree has {len(dirty)} uncommitted change(s).",
+        )
+    return CheckOutcome(
+        id="git-clean", command="(internal)", required=False,
+        status="passed", message="Working tree is clean.",
+    )
+
+
+#: Built-in check id -> implementation. Enabled per project via
+#: ``config.default_checks``. Adding a project's own command checks still goes
+#: through ``config.checks`` and needs no code here.
+BUILTIN_CHECKS = {
+    "skills-valid": _builtin_skills_valid,
+    "report-hygiene": _builtin_report_hygiene,
+    "git-clean": _builtin_git_clean,
+}
+
+
+def _builtin_outcome(check_id: str, repo_root: Path, config: ProjectConfig) -> CheckOutcome:
+    impl = BUILTIN_CHECKS.get(check_id)
+    if impl is None:
+        return CheckOutcome(
+            id=check_id, command="(internal)", required=False,
+            status="skipped", message="Unknown built-in check; skipped.",
+        )
+    return impl(repo_root, config)
+
+
 def run_checks(repo_root: Path, *, config: ProjectConfig | None = None) -> CheckResult:
     """Run the always-on config check plus every configured command check.
 
@@ -243,6 +357,8 @@ def run_checks(repo_root: Path, *, config: ProjectConfig | None = None) -> Check
         config = load_config(repo_root)
 
     outcomes: list[CheckOutcome] = [_config_integrity_check(repo_root)]
+    for check_id in config.default_checks:
+        outcomes.append(_builtin_outcome(check_id, repo_root, config))
     for check in config.checks:
         outcomes.append(_outcome_for(check, repo_root))
 
@@ -259,12 +375,18 @@ def run_checks(repo_root: Path, *, config: ProjectConfig | None = None) -> Check
     return CheckResult(op="check", status=status, checks=outcomes, blockers=blockers, warnings=warnings)
 
 
-def closeout(repo_root: Path, *, config: ProjectConfig | None = None) -> CheckResult:
+def closeout(
+    repo_root: Path,
+    *,
+    config: ProjectConfig | None = None,
+    duration_ms: int | None = None,
+) -> CheckResult:
     """Run checks and record evidence of the outcome.
 
     Evidence is recorded even on failure (failures are evidence, not hidden).
     The closeout result is the same shape as a check result but with
-    ``op='closeout'`` and includes the recorded evidence path.
+    ``op='closeout'`` and includes the recorded evidence path. When
+    ``duration_ms`` is supplied it is recorded as latency evidence.
     """
     if config is None:
         config = load_config(repo_root)
@@ -276,6 +398,13 @@ def closeout(repo_root: Path, *, config: ProjectConfig | None = None) -> CheckRe
         if status == "passed"
         else ("Required checks failed." if status == "failed" else "Checks passed with warnings.")
     )
+    data: dict[str, Any] = {
+        "checks": [o.to_safe_dict() for o in result.checks],
+        "blockers": result.blockers,
+        "warnings": result.warnings,
+    }
+    if duration_ms is not None:
+        data["duration_ms"] = int(duration_ms)
     event = EvidenceEvent(
         schema_version=EVIDENCE_SCHEMA_VERSION,
         event_id=new_event_id(),
@@ -283,11 +412,7 @@ def closeout(repo_root: Path, *, config: ProjectConfig | None = None) -> CheckRe
         status=status,
         timestamp=utc_now_iso(),
         summary=summary,
-        data={
-            "checks": [o.to_safe_dict() for o in result.checks],
-            "blockers": result.blockers,
-            "warnings": result.warnings,
-        },
+        data=data,
     )
     append_evidence(repo_root, event)
 
@@ -319,10 +444,18 @@ def record_init(repo_root: Path, project_name: str) -> Path:
     return append_evidence(repo_root, event)
 
 
-def record_plan(repo_root: Path, plan_dict: dict[str, Any]) -> Path:
+def record_plan(
+    repo_root: Path,
+    plan_dict: dict[str, Any],
+    duration_ms: int | None = None,
+) -> Path:
     """Record a lightweight advisory evidence event for a plan (derived, not
-    trusted-local)."""
+    trusted-local). When ``duration_ms`` is supplied it is recorded as latency
+    evidence."""
     n = len(plan_dict.get("steps", []))
+    data: dict[str, Any] = {"steps": n, "stages": plan_dict.get("stages", [])}
+    if duration_ms is not None:
+        data["duration_ms"] = int(duration_ms)
     event = EvidenceEvent(
         schema_version=EVIDENCE_SCHEMA_VERSION,
         event_id=new_event_id(),
@@ -330,6 +463,6 @@ def record_plan(repo_root: Path, plan_dict: dict[str, Any]) -> Path:
         status="passed",
         timestamp=utc_now_iso(),
         summary=f"Plan produced {n} skill step(s). Advisory.",
-        data={"steps": n, "stages": plan_dict.get("stages", [])},
+        data=data,
     )
     return append_evidence(repo_root, event)

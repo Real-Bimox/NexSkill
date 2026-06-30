@@ -43,6 +43,7 @@ and a plain-language message.
 ```text
 .nexskill/config.json     project config: skill sources, checks, policies
 .nexskill/skills/         local skill packages (seeded on init)
+.nexskill/graph.json      optional skill-graph overlay (typed relationships)
 .nexskill/evidence.jsonl  append-only local evidence events
 .nexskill/reports/latest.json   generated report
 .nexskill/reports/latest.md     owner-readable summary
@@ -92,14 +93,30 @@ nexskill skill validate [--repo <path>] [--json]
 
 ## How planning works
 
-`nexskill plan` selects a bounded, ordered skill path using skill metadata only
-(stages, tags, inputs/outputs, and declared `depends_on` / `conflicts_with`
-relationships). It is deterministic and offline: the same registry and task
+`nexskill plan` selects a bounded, ordered skill path. It seeds by relevance to
+the task, then walks the NexSkill skill graph: first the guaranteed `depends_on`
+prerequisite closure, then other navigable relationships, within a bounded step
+budget. It is deterministic and offline: the same registry, overlay, and task
 always produce the same path. Declared conflicts inside the selected set are
 surfaced as advisory signals, never silently chosen.
 
+The skill graph is built from manifest relationships (`depends_on`,
+`conflicts_with`). A project may add an optional overlay at `.nexskill/graph.json`
+(`nexskill.graph.v1`) declaring the richer typed relationships
+(`composes_with`, `specializes`, `similar_to`) to enrich selection — no
+core-code change required. With no overlay, planning uses manifest edges only.
+
 The selected skills guide the work; they do not prove the work is ready. Run
 `nexskill check` for proof.
+
+## Default checks
+
+`nexskill init` enables a portable, dependency-light set of advisory checks
+(`skills-valid`, `report-hygiene`, `git-clean`) via the `default_checks` config
+field. They never block: the worst outcome is a warning, and a check whose
+precondition is absent reports `skipped`. `plan`, `check`, and `closeout` also
+record their own latency so warm-cache performance is visible in evidence and
+the report.
 
 ## Trust vocabulary
 

@@ -22,9 +22,11 @@ import argparse
 import json
 import shutil
 import sys
+import time
 from pathlib import Path
 from typing import Any, Callable
 
+from . import graph as graph_mod
 from . import proof, report
 from .contracts import (
     NexSkillError,
@@ -49,6 +51,11 @@ SEED_SKILLS_DIR = Path(__file__).resolve().parents[2] / "data" / "nexskill_skill
 def _emit_json(payload: dict[str, Any], exit_code: int = 0) -> None:
     sys.stdout.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
     raise _Exit(exit_code)
+
+
+def _elapsed_ms(start: float) -> int:
+    """Whole-millisecond wall time since ``start`` (a ``time.monotonic`` mark)."""
+    return int((time.monotonic() - start) * 1000)
 
 
 class _Exit(Exception):
@@ -129,26 +136,37 @@ def _load_registry(repo: Path):
 
 def cmd_plan(args: argparse.Namespace) -> int:
     repo = Path(args.repo).resolve()
+    started = time.monotonic()
     config, registry, reg_report = _load_registry(repo)
 
-    planner = GraphPlanner(registry)
+    # Build the skill graph from manifest edges plus the optional overlay, then
+    # plan over it. A missing overlay leaves a manifest-only graph (unchanged
+    # behavior); an invalid overlay fails closed in load_overlay_edges.
+    overlay = graph_mod.load_overlay_edges(repo)
+    skill_graph = graph_mod.SkillGraph.from_registry(registry, overlay)
+
+    planner = GraphPlanner(registry, skill_graph)
     plan_result = planner.plan(args.task)
-    proof.record_plan(repo, plan_result.to_dict())
+    duration_ms = _elapsed_ms(started)
+    proof.record_plan(repo, plan_result.to_dict(), duration_ms=duration_ms)
 
     # Write an advisory report so the owner can see the plan.
     rep = report.build_report(
         task=args.task, plan=plan_result, check=None,
         project_name=config.project_name, repo_root=repo,
+        extra_sections={"performance": {"plan_ms": duration_ms}},
     )
     report.write_report(repo, rep)
 
     result = {
         "task": plan_result.task,
         "stages": plan_result.stages,
-        "steps": [s.__dict__ if hasattr(s, "__dict__") else s for s in []] or _plan_steps(plan_result),
+        "steps": _plan_steps(plan_result),
         "conflicts": plan_result.conflicts,
         "warnings": plan_result.warnings,
         "registry": {"loaded": len(registry), "skipped": len(reg_report.skipped)},
+        "graph": {"edges": skill_graph.edge_count, "overlay_edges": len(overlay)},
+        "performance": {"plan_ms": duration_ms},
         "report": ".nexskill/reports/latest.json",
     }
     if not args.json:
@@ -186,13 +204,16 @@ def _plan_steps(plan_result) -> list[dict[str, str]]:
 
 def cmd_check(args: argparse.Namespace) -> int:
     repo = Path(args.repo).resolve()
+    started = time.monotonic()
     config = proof.load_config(repo)
     result = proof.run_checks(repo, config=config)
+    duration_ms = _elapsed_ms(started)
 
     # Optional advisory report (no plan context here).
     rep = report.build_report(
         task=None, plan=None, check=result,
         project_name=config.project_name, repo_root=repo,
+        extra_sections={"performance": {"check_ms": duration_ms}},
     )
     report.write_report(repo, rep)
 
@@ -217,12 +238,15 @@ def cmd_check(args: argparse.Namespace) -> int:
 
 def cmd_closeout(args: argparse.Namespace) -> int:
     repo = Path(args.repo).resolve()
+    started = time.monotonic()
     config = proof.load_config(repo)
-    result = proof.closeout(repo, config=config)
+    result = proof.closeout(repo, config=config, duration_ms=_elapsed_ms(started))
+    duration_ms = _elapsed_ms(started)
 
     rep = report.build_report(
         task=None, plan=None, check=result,
         project_name=config.project_name, repo_root=repo,
+        extra_sections={"performance": {"closeout_ms": duration_ms}},
     )
     report.write_report(repo, rep)
 

@@ -213,6 +213,14 @@ def render_markdown(report: dict[str, Any]) -> str:
             lines.append(f"- {w}")
         lines.append("")
 
+    performance = report.get("performance")
+    if isinstance(performance, dict) and performance:
+        lines.append("## Performance")
+        lines.append("")
+        for key in sorted(performance):
+            lines.append(f"- {key}: {performance[key]}")
+        lines.append("")
+
     lines.append("## Next action")
     lines.append("")
     lines.append(report.get("next_action", ""))
