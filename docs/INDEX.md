@@ -3,6 +3,11 @@
 This index separates current implementation docs from NexSkill vNext direction
 documents.
 
+## NexSkill product entry
+
+- [NEXSKILL.md](../NEXSKILL.md) - NexSkill product entry point: commands,
+  quickstart, manifest format, and how planning works.
+
 ## Current implementation
 
 - [Architecture](architecture.md) - current architecture and repository design.
@@ -25,6 +30,12 @@ documents.
   capability.
 - [Development acceleration review](reviews/2026-06-30-development-acceleration-source-review.md) -
   internal source review that informed the NexSkill integration direction.
+
+## Implementation rounds
+
+- [Round 1 foundation report](reports/2026-06-30-nexskill-round-1-foundation.md) -
+  what landed, what was verified, and what remains after the first NexSkill
+  development round.
 
 ## Project guidance
 
