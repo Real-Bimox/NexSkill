@@ -7,6 +7,8 @@ documents.
 
 - [NEXSKILL.md](../NEXSKILL.md) - NexSkill product entry point: commands,
   quickstart, manifest format, and how planning works.
+- [NexSkill v1.0.0 release notes](releases/v1.0.0.md) - GitHub release notes,
+  product highlights, verification, and what is intentionally out of scope.
 
 ## Current implementation
 

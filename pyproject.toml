@@ -4,27 +4,40 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexskill"
-version = "0.1.0"
-description = "NexSkill guides the work, selects the right skill path, and proves the result."
+version = "1.0.0"
+description = "Local skill planning, deterministic proof, and evidence reports for agent-assisted development."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 authors = [
-    { name = "Tong Bai" },
-    { name = "Pengfei Zhou" },
-    { name = "Zhenglin Wan" },
+    { name = "Bahram Boutorabi" },
 ]
-keywords = ["agent", "skill-retrieval", "skill-graph", "llm", "agentic"]
+keywords = [
+    "agent-assisted-development",
+    "developer-tools",
+    "local-verification",
+    "skill-planning",
+    "software-delivery",
+]
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Real-Bimox/NexSkill"
+Repository = "https://github.com/Real-Bimox/NexSkill"
+Documentation = "https://github.com/Real-Bimox/NexSkill#readme"
+Issues = "https://github.com/Real-Bimox/NexSkill/issues"
 
 [project.optional-dependencies]
 repro = [

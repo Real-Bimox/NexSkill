@@ -1,4 +1,4 @@
-# NexSkill
+# NexSkill v1.0
 
 NexSkill is the development accelerator that selects the right skills, guides
 the work, and proves the result with deterministic local checks.

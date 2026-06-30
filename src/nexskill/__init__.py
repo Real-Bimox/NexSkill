@@ -14,7 +14,10 @@ from .contracts import (
     NexSkillError,
 )
 
+__version__ = "1.0.0"
+
 __all__ = [
+    "__version__",
     "ENVELOPE_SCHEMA_VERSION",
     "EVIDENCE_SCHEMA_VERSION",
     "PRODUCT_NAME",
