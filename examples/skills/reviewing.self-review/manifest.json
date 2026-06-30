@@ -1,0 +1,13 @@
+{
+  "schema_version": "nexskill.skill.v1",
+  "id": "reviewing.self-review",
+  "name": "Self Review",
+  "summary": "Reviews a change against the task, the plan, and the surrounding conventions before handing off.",
+  "stages": ["verifying"],
+  "inputs": ["code_change", "implementation_plan"],
+  "outputs": ["review_notes"],
+  "depends_on": [],
+  "conflicts_with": [],
+  "tags": ["development", "verifying", "example"],
+  "entrypoint": "SKILL.md"
+}

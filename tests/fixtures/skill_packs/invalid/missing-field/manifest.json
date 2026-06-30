@@ -1,0 +1,8 @@
+{
+  "schema_version": "nexskill.skill.v1",
+  "id": "invalid.missing-summary",
+  "name": "Missing Summary",
+  "summary": "",
+  "stages": ["building"],
+  "entrypoint": "SKILL.md"
+}

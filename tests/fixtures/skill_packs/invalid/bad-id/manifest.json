@@ -1,0 +1,8 @@
+{
+  "schema_version": "nexskill.skill.v1",
+  "id": "Bad Uppercase ID",
+  "name": "Bad Id",
+  "summary": "Intentionally invalid id; a registry scan should skip this package.",
+  "stages": ["building"],
+  "entrypoint": "SKILL.md"
+}

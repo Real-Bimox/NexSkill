@@ -1,0 +1,13 @@
+{
+  "schema_version": "nexskill.skill.v1",
+  "id": "valid.minimal",
+  "name": "Minimal Valid",
+  "summary": "A minimal but valid skill package used by fixture-driven tests.",
+  "stages": ["building"],
+  "inputs": [],
+  "outputs": [],
+  "depends_on": [],
+  "conflicts_with": [],
+  "tags": ["fixture", "valid"],
+  "entrypoint": "SKILL.md"
+}

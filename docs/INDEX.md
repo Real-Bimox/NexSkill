@@ -14,6 +14,13 @@ documents.
 - [Reproducing](reproducing.md) - fresh-clone setup and benchmark walkthrough.
 - [Paper reproduction](paper_reproduction.md) - paper-aligned reproduction notes.
 
+## Skill pack SDK
+
+- [Developing skills](sdk/developing-skills.md) - developer guide for authoring
+  skills, the `nexskill skill scaffold` command, validation, and selection.
+- [Manifest schema reference](sdk/manifest-schema.md) - the full
+  `nexskill.skill.v1` field reference.
+
 ## NexSkill vNext direction
 
 - [Decision 0001](decisions/0001-nexskill-vnext-approved-direction.md) -
@@ -39,6 +46,8 @@ documents.
 - [Round 2 graph + proof + polish report](reports/2026-06-30-nexskill-round-2-graph-proof-polish.md) -
   graph-connected planner, portable default checks, latency evidence, report
   snapshots, and a second-repo dogfood path.
+- [Round 2b skill pack SDK report](reports/2026-06-30-nexskill-round-2b-skill-pack-sdk.md) -
+  the skill pack template, scaffold command, examples, fixtures, and tests.
 - [Round 2c lane isolation preflight report](reports/2026-06-30-nexskill-round-2c-lane-isolation-preflight.md) -
   deterministic, standard-library-only lane preflight that confirms the correct
   branch/worktree and base before starting work.

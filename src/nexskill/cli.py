@@ -6,7 +6,7 @@ Public command family:
     nexskill plan   "<task>" [--repo <path>] [--json]
     nexskill check  [--repo <path>] [--json]
     nexskill closeout [--repo <path>] [--json]
-    nexskill skill  list|validate [--repo <path>] [--json]
+    nexskill skill  list|validate|scaffold ... [--repo <path>] [--json]
 
 Every ``--json`` command emits one envelope:
 
@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from . import graph as graph_mod
-from . import preflight, proof, report
+from . import preflight, proof, report, scaffold
 from .contracts import (
     NexSkillError,
     PRODUCT_NAME,
@@ -318,6 +318,35 @@ def cmd_preflight(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Command: skill scaffold
+# ---------------------------------------------------------------------------
+
+
+def cmd_skill_scaffold(args: argparse.Namespace) -> int:
+    repo = Path(args.repo).resolve()
+    result = scaffold.scaffold_skill(
+        args.name,
+        repo,
+        id=args.id,
+        name=args.display_name,
+        summary=args.summary,
+        stage=args.stage,
+        force=bool(args.force),
+    )
+    payload = success_envelope(
+        "skill-scaffold",
+        result.to_dict(repo_root=repo),
+    )
+    if not args.json:
+        rel = payload["result"]["package_dir"]
+        _human(f"{PRODUCT_NAME} scaffolded skill '{result.skill_id}'.")
+        _human(f"  package: {rel}")
+        _human(f"  files:   {', '.join(result.files_written)}")
+        _human("Next: nexskill skill validate --repo .")
+    return _finish(payload, args.json, exit_code=0)
+
+
+# ---------------------------------------------------------------------------
 # Finish + dispatch
 # ---------------------------------------------------------------------------
 
@@ -388,6 +417,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_sv.add_argument("--repo", default=".", help="Repository path.")
     p_sv.add_argument("--json", action="store_true", help="Emit JSON envelope.")
     p_sv.set_defaults(func=cmd_skill_validate, _op="skill-validate")
+
+    p_sc = skill_sub.add_parser(
+        "scaffold", help="Scaffold a new skill package from the shipped template."
+    )
+    p_sc.add_argument("name", help="Skill package name (e.g. reviewing.checklist).")
+    p_sc.add_argument("--id", default=None, help="Override the skill id (defaults to <name>).")
+    p_sc.add_argument("--name", dest="display_name", default=None, help="Human-readable skill name.")
+    p_sc.add_argument("--summary", default=None, help="One-line skill summary.")
+    p_sc.add_argument("--stage", default=None, help="Development stage (default: building).")
+    p_sc.add_argument("--force", action="store_true", help="Overwrite an existing package.")
+    p_sc.add_argument("--repo", default=".", help="Repository path.")
+    p_sc.add_argument("--json", action="store_true", help="Emit JSON envelope.")
+    p_sc.set_defaults(func=cmd_skill_scaffold, _op="skill-scaffold")
 
     # preflight (lane isolation)
     p_pf = sub.add_parser(
