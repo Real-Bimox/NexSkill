@@ -54,6 +54,9 @@ provenance; it is not part of the NexSkill product surface.
   snapshots, and a second-repo dogfood path.
 - [Round 2b skill pack SDK report](reports/2026-06-30-nexskill-round-2b-skill-pack-sdk.md) -
   the skill pack template, scaffold command, examples, fixtures, and tests.
+- [Release-candidate hardening report](reports/2026-07-01-nexskill-release-candidate-hardening.md) -
+  packaging resources into the wheel, distribution rename, portability proof,
+  and the owner decision needed before tag/release.
 - [Round 2c lane isolation preflight report](reports/2026-06-30-nexskill-round-2c-lane-isolation-preflight.md) -
   deterministic, standard-library-only lane preflight that confirms the correct
   branch/worktree and base before starting work.
