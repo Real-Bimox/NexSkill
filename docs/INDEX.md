@@ -39,6 +39,9 @@ documents.
 - [Round 2 graph + proof + polish report](reports/2026-06-30-nexskill-round-2-graph-proof-polish.md) -
   graph-connected planner, portable default checks, latency evidence, report
   snapshots, and a second-repo dogfood path.
+- [Round 2c lane isolation preflight report](reports/2026-06-30-nexskill-round-2c-lane-isolation-preflight.md) -
+  deterministic, standard-library-only lane preflight that confirms the correct
+  branch/worktree and base before starting work.
 
 ## Project guidance
 

@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from . import graph as graph_mod
-from . import proof, report
+from . import preflight, proof, report
 from .contracts import (
     NexSkillError,
     PRODUCT_NAME,
@@ -299,6 +299,25 @@ def cmd_skill_validate(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Command: preflight (lane isolation)
+# ---------------------------------------------------------------------------
+
+
+def cmd_preflight(args: argparse.Namespace) -> int:
+    result = preflight.run_preflight(
+        args.repo,
+        expected_branch=args.expected_branch,
+        expected_base=args.expected_base,
+        allow_untracked=args.allow_untracked,
+    )
+    exit_code = 0 if result.ok else 1
+    if args.json:
+        _emit_json(result.to_envelope(), exit_code=exit_code)
+    _human(preflight.render_human(result))
+    return exit_code
+
+
+# ---------------------------------------------------------------------------
 # Finish + dispatch
 # ---------------------------------------------------------------------------
 
@@ -369,6 +388,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_sv.add_argument("--repo", default=".", help="Repository path.")
     p_sv.add_argument("--json", action="store_true", help="Emit JSON envelope.")
     p_sv.set_defaults(func=cmd_skill_validate, _op="skill-validate")
+
+    # preflight (lane isolation)
+    p_pf = sub.add_parser(
+        "preflight",
+        help="Confirm the current branch/worktree before starting lane work.",
+    )
+    p_pf.add_argument("--repo", default=".", help="Repository or worktree path.")
+    p_pf.add_argument("--expected-branch", default=None, help="Branch the lane must be on.")
+    p_pf.add_argument("--expected-base", default=None,
+                      help="Ref that must be an ancestor of HEAD (the lane's base).")
+    p_pf.add_argument("--allow-untracked", action="append", default=None, metavar="PATTERN",
+                      help="Untracked path or glob to treat as expected (repeatable).")
+    p_pf.add_argument("--json", action="store_true", help="Emit JSON envelope.")
+    p_pf.set_defaults(func=cmd_preflight, _op="preflight")
 
     return parser
 

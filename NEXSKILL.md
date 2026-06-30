@@ -89,7 +89,34 @@ nexskill check [--repo <path>] [--json]
 nexskill closeout [--repo <path>] [--json]
 nexskill skill list [--repo <path>] [--json]
 nexskill skill validate [--repo <path>] [--json]
+nexskill preflight [--repo <path>] [--expected-branch <name>]
+                   [--expected-base <ref>] [--allow-untracked <glob>] [--json]
 ```
+
+## Lane preflight
+
+Before starting work in a NexSkill lane (branch/worktree), run the preflight to
+confirm you are in the right place and not about to collide with another lane:
+
+```bash
+nexskill preflight \
+  --expected-branch nexskill/round-3-my-lane \
+  --expected-base origin/nexskill/round-2-graph-proof-polish
+```
+
+It is deterministic, standard-library only, and read-only — it inspects git and
+worktree state and never mutates the repository. It reports the current worktree
+path, branch, HEAD, upstream (if any), tracked changes, and untracked files, and
+it exits non-zero (with a stable failure code) when:
+
+- the current branch is not `--expected-branch` (`BRANCH_MISMATCH`);
+- the worktree has tracked changes (`TRACKED_CHANGES`);
+- unexpected untracked files exist (`UNEXPECTED_UNTRACKED`);
+- `--expected-base` is not an ancestor of HEAD (`MISSING_BASE`).
+
+Untracked paths a lane legitimately carries can be allow-listed (repeatable),
+for example `--allow-untracked docs/sdk --allow-untracked templates`. The same
+check is runnable standalone with `python -m nexskill.preflight`.
 
 ## How planning works
 
