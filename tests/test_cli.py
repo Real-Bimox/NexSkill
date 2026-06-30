@@ -112,6 +112,17 @@ class CliInitPlanCheckTests(unittest.TestCase):
         self.assertFalse(payload["ok"])
         self.assertEqual(payload["error"]["code"], "CONFIG_MISSING")
 
+    def test_json_error_path_emits_clean_envelope_without_traceback(self):
+        # A NexSkillError in --json mode must produce only the error envelope on
+        # stdout and exit 1, never a leaked Python traceback on stderr.
+        proc = self._run(["skill", "scaffold", "not a valid id!!", "--repo", ".", "--json"])
+        self.assertEqual(proc.returncode, 1, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["op"], "skill-scaffold")
+        self.assertNotIn("Traceback", proc.stderr)
+        self.assertNotIn("_Exit", proc.stderr)
+
 
 class CliSkillSubcommandTests(unittest.TestCase):
     def setUp(self):

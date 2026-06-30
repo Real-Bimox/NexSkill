@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "skilldag"
+name = "nexskill"
 version = "0.1.0"
-description = "Dependency-aware skill graph for agentic skill retrieval"
+description = "NexSkill guides the work, selects the right skill path, and proves the result."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -51,11 +51,15 @@ all = [
 ]
 
 [project.scripts]
-skilldag = "skilldag.cli:main"
 nexskill = "nexskill.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Ship NexSkill runtime resources (built-in skills + scaffold template) inside
+# the wheel so an installed package is self-contained.
+[tool.setuptools.package-data]
+nexskill = ["resources/skills/**/*", "resources/templates/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -11,6 +11,12 @@ documents.
 ## Current implementation
 
 - [Architecture](architecture.md) - current architecture and repository design.
+
+## Research provenance
+
+NexSkill builds on a research reproduction kept in this repository for
+provenance; it is not part of the NexSkill product surface.
+
 - [Reproducing](reproducing.md) - fresh-clone setup and benchmark walkthrough.
 - [Paper reproduction](paper_reproduction.md) - paper-aligned reproduction notes.
 

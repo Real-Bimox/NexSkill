@@ -28,6 +28,7 @@ from typing import Any, Callable
 
 from . import graph as graph_mod
 from . import preflight, proof, report, scaffold
+from ._resources import resource_path
 from .contracts import (
     NexSkillError,
     PRODUCT_NAME,
@@ -38,9 +39,10 @@ from .contracts import (
 from .planner import GraphPlanner
 from .registry import SkillRegistry
 
-# Seed skill corpus shipped with the package, copied into .nexskill/skills on
-# init so a fresh project has useful skills out of the box.
-SEED_SKILLS_DIR = Path(__file__).resolve().parents[2] / "data" / "nexskill_skills"
+# Seed skill corpus shipped inside the package, copied into .nexskill/skills on
+# init so a fresh project has useful skills out of the box. Resolved through the
+# package so it ships in the wheel and works outside a source checkout.
+SEED_SKILLS_DIR = resource_path("skills")
 
 
 # ---------------------------------------------------------------------------
@@ -254,8 +256,8 @@ def cmd_closeout(args: argparse.Namespace) -> int:
     exit_code = 0 if result.status != "failed" else 1
     if not args.json:
         _human(f"{PRODUCT_NAME} closeout: {result.status}")
-        _human(f"  evidence: .nexskill/evidence.jsonl")
-        _human(f"  report:   .nexskill/reports/latest.md")
+        _human("  evidence: .nexskill/evidence.jsonl")
+        _human("  report:   .nexskill/reports/latest.md")
         for b in result.blockers:
             _human(f"  blocker: {b}")
     return _finish(payload, args.json, exit_code=exit_code)
@@ -361,13 +363,18 @@ def _run_command(func: Callable[[argparse.Namespace], int], args: argparse.Names
     op = getattr(args, "_op", "nexskill")
     try:
         return func(args)
-    except NexSkillError as exc:
-        if getattr(args, "json", False):
-            _emit_json(error_envelope(op, exc), exit_code=1)
-        _err(f"{PRODUCT_NAME} error [{exc.code}]: {exc.message}")
-        return 1
     except _Exit as e:
         return e.code
+    except NexSkillError as exc:
+        if getattr(args, "json", False):
+            # _emit_json raises _Exit to signal the exit code; catch it here so
+            # the JSON error envelope is the only output, not a traceback.
+            try:
+                _emit_json(error_envelope(op, exc), exit_code=1)
+            except _Exit as e:
+                return e.code
+        _err(f"{PRODUCT_NAME} error [{exc.code}]: {exc.message}")
+        return 1
 
 
 def build_parser() -> argparse.ArgumentParser:

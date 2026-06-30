@@ -25,10 +25,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ._resources import resource_path
 from .contracts import NexSkillError, SkillManifest, _ID_RE
 
-#: Template directory shipped with the package, sibling of ``data/``.
-TEMPLATE_DIR = Path(__file__).resolve().parents[2] / "templates" / "skill_pack"
+#: Template directory shipped inside the package; resolved through the package so
+#: it ships in the wheel and works outside a source checkout.
+TEMPLATE_DIR = resource_path("templates", "skill_pack")
 
 #: Default skill source directory relative to a repository root.
 DEFAULT_SKILLS_DIR = Path(".nexskill") / "skills"

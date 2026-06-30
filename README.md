@@ -1,85 +1,107 @@
-# SkillDAG
+# NexSkill
 
-**SkillDAG: Self-Evolving Typed Skill Graphs for LLM Skill Selection at Scale**
+**NexSkill guides the work, selects the right skill path, and proves the result.**
 
-Open-source reproduction repository for the paper: [arXiv:2606.03056](https://arxiv.org/abs/2606.03056).
+NexSkill is a development accelerator. From inside any repository it selects a
+bounded, ordered set of reusable skills for a task, guides the work along that
+path, and proves the result with deterministic, dependency-light local checks.
+It advises, routes, checks, and reports — it does not automatically approve,
+merge, release, or satisfy owner gates.
 
-<img src="docs/skilldag-per-episode-workflow.png" width="100%" alt="SkillDAG per-episode workflow"/>
+## Install
 
-## What is SkillDAG?
+NexSkill is a pure-Python package with no runtime dependencies and supports
+Python ≥ 3.10.
 
-As LLM agents adopt large skill libraries, selecting the right subset becomes a structural problem rather than a similarity-matching one: skills depend on, conflict with, specialize, or duplicate one another — a structure invisible to both full enumeration and embedding similarity.
+```bash
+# From a checkout of this repository:
+pip install .
 
-**SkillDAG** models inter-skill relationships as a typed directed graph and exposes it to an LLM agent as an inference-time, agent-callable structural retrieval interface:
+# Or build and install a wheel:
+pip install build
+python -m build --wheel
+pip install dist/nexskill-*.whl
+```
 
-- `search` returns vector matches, typed-edge neighbors, and conflict signals
-- `propose-edge` / `edit-edge` let the agent register execution-backed edges
-- The graph accumulates structure across episodes
-
-## What is in this repo
-
-- `src/skilldag/` — SkillDAG library and CLI
-- `scripts/` — setup, data download, benchmark launchers, replay tools
-- `benchmarks/` — ALFWorld + SkillsBench integration code
-- `analysis/` — scoring and post-hoc analysis helpers
-- `docs/INDEX.md` — documentation entry point, including the NexSkill vNext
-  proposal and development acceleration review
-- `docs/reproducing.md` — fresh-clone walkthrough
-- `artifacts/expected/` — expected paper-aligned metrics for verification
-
-## Prerequisites
-
-- Python ≥ 3.10 (python3.11 recommended)
-- Docker (for SkillsBench tasks)
-- `gettext` (for `envsubst`) — `brew install gettext` on macOS, `apt install gettext-base` on Debian/Ubuntu
-- An OpenAI-compatible chat API key
-
-**SkillsBench** also requires installing the Harbor framework first. See `docs/reproducing.md`.
-
-**ALFWorld** also requires running `alfworld-download` once to populate `ALFWORLD_DATA` (configured in `.env`).
+The installed package is self-contained: the built-in skill corpus and the
+scaffold template ship inside the wheel, so `nexskill` works from any directory.
 
 ## Quickstart
 
 ```bash
-git clone https://github.com/Ericbai06/SkillDAG.git
-cd SkillDAG
-bash scripts/prepare_env.sh
-# fill API keys in .env
-bash scripts/setup.sh
+nexskill init                              # create .nexskill/config.json + seed skills
+nexskill plan "add a small repo change"    # bounded, deterministic skill path
+nexskill check --repo .                    # run configured local checks
+nexskill closeout --repo .                 # record closeout evidence + report
 ```
 
-## Benchmark Commands
+Every command accepts `--json` and returns one envelope:
 
-### SkillsBench (200 tasks)
+```json
+{ "ok": true, "schema_version": "nexskill.v1", "op": "plan", "result": {} }
+```
+
+Errors use the same shape with `ok: false`, a stable `UPPER_SNAKE` error code,
+and a plain-language message.
+
+## Add a skill
+
+New skills require no core-code change. The fastest path is the scaffold, which
+writes a valid package from the shipped template:
 
 ```bash
-SKILLDAG_SCALE=200 SKILLDAG_WORKERS=3 bash scripts/run_skillsbench.sh
+nexskill skill scaffold reviewing.checklist --repo . \
+  --name "Review Checklist" \
+  --summary "Runs a fixed review checklist over a change." \
+  --stage verifying
+nexskill skill validate --repo .
+nexskill plan "review a change" --repo .
 ```
 
-### ALFWorld (10 games)
+See [docs/sdk/developing-skills.md](docs/sdk/developing-skills.md) for the full
+developer guide and [docs/sdk/manifest-schema.md](docs/sdk/manifest-schema.md)
+for the manifest field reference. Working examples live in
+[examples/skills/](examples/skills/).
 
-```bash
-MAX_GAMES=10 bash scripts/run_alfworld.sh
+## Commands
+
+```text
+nexskill init [--repo <path>] [--force]
+nexskill plan "<task>" [--repo <path>] [--json]
+nexskill check [--repo <path>] [--json]
+nexskill closeout [--repo <path>] [--json]
+nexskill skill list|validate [--repo <path>] [--json]
+nexskill skill scaffold <name> [--id <id>] [--name <name>] [--summary <text>]
+                          [--stage <stage>] [--force] [--repo <path>] [--json]
+nexskill preflight [--repo <path>] [--expected-branch <name>]
+                   [--expected-base <ref>] [--allow-untracked <glob>] [--json]
 ```
 
-### Paper-scale runs
+## Documentation
 
-```bash
-SKILLDAG_SCALE=1000 SKILLDAG_WORKERS=5 bash scripts/run_skillsbench.sh
-bash scripts/run_alfworld.sh
-bash scripts/run_alfworld_traintest.sh
-```
+- [NEXSKILL.md](NEXSKILL.md) — product entry point: commands, quickstart,
+  manifest format, planning, checks, and lane preflight.
+- [docs/INDEX.md](docs/INDEX.md) — full documentation index.
+- [docs/architecture.md](docs/architecture.md) — architecture and repository
+  design.
+- [AGENTS.md](AGENTS.md) — project guidance for agents working in this
+  repository.
 
-## Verification
+## Research provenance
 
-See:
+NexSkill builds on a research reproduction of typed skill-graph retrieval for
+LLM agents. That research code, benchmarks, and reproduction walkthrough remain
+in this repository for provenance and are not part of the NexSkill product
+surface:
 
-- `docs/INDEX.md`
-- `docs/reproducing.md`
+- [docs/reproducing.md](docs/reproducing.md) — fresh-clone setup and benchmark
+  walkthrough for the research reproduction.
+- [docs/paper_reproduction.md](docs/paper_reproduction.md) — paper-aligned
+  reproduction notes.
+- `benchmarks/`, `analysis/`, `scripts/`, and the `src/skilldag/` package — the
+  research library and benchmark integration.
 
-## Citation
-
-If you use SkillDAG, please cite:
+If you use the underlying research, please cite:
 
 ```bibtex
 @misc{bai2026skilldagselfevolvingtypedskill,
@@ -95,4 +117,4 @@ If you use SkillDAG, please cite:
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
